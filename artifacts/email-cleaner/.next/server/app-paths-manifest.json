@@ -1,3 +1,4 @@
 {
+  "/validate/route": "app/validate/route.js",
   "/page": "app/page.js"
 }
