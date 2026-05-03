@@ -514,12 +514,12 @@ export default function Home() {
                     </li>
                   ))}
                 </ul>
-                <button
-                  onClick={() => alert("Stripe integration coming soon! Connect Stripe to enable Pro checkout.")}
+                <Link
+                  href="/sign-up"
                   className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-6 py-3 text-sm font-semibold text-white shadow-md transition-all hover:bg-indigo-700 hover:shadow-lg"
                 >
-                  Upgrade to Pro <ArrowRight className="h-4 w-4" />
-                </button>
+                  Get started <ArrowRight className="h-4 w-4" />
+                </Link>
               </div>
             </div>
           </div>
