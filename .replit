@@ -18,25 +18,3 @@ expertMode = true
 [postMerge]
 path = "scripts/post-merge.sh"
 timeoutMs = 20000
-
-[[ports]]
-localPort = 8080
-externalPort = 8080
-
-[[ports]]
-localPort = 8081
-externalPort = 80
-
-[[ports]]
-localPort = 19548
-externalPort = 3000
-
-[userenv]
-
-[userenv.shared]
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_ZnVubnktY2F0dGxlLTExLmNsZXJrLmFjY291bnRzLmRldiQ
-CLERK_SECRET_KEY=R6CLZjsU6ILjz3JX5N
-NEXT_PUBLIC_CLERK_SIGN_IN_URL = "/sign-in"
-NEXT_PUBLIC_CLERK_SIGN_UP_URL = "/sign-up"
-NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL = "/dashboard"
-NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL = "/dashboard"
