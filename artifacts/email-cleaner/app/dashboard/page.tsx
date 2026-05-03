@@ -19,6 +19,10 @@ import {
   ArrowRight,
   TrendingUp,
   Inbox,
+  Copy,
+  ClipboardCheck,
+  PartyPopper,
+  RefreshCw,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -93,9 +97,25 @@ export default function DashboardPage() {
   const [result, setResult] = useState<ValidationResult | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [loadingDot, setLoadingDot] = useState(0);
   const fileRef = useRef<HTMLInputElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
+  const dotTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [activeTab, setActiveTab] = useState<"upload" | "history">("upload");
+
+  const startDotAnimation = () => {
+    dotTimerRef.current = setInterval(() => {
+      setLoadingDot((d) => (d + 1) % 4);
+    }, 400);
+  };
+
+  const stopDotAnimation = () => {
+    if (dotTimerRef.current) {
+      clearInterval(dotTimerRef.current);
+      dotTimerRef.current = null;
+    }
+  };
 
   const processFile = useCallback(
     (file: File) => {
@@ -138,6 +158,7 @@ export default function DashboardPage() {
   const handleValidate = async () => {
     if (!emails.length) return;
     setPageState("loading");
+    startDotAnimation();
     try {
       const res = await fetch("/validate", {
         method: "POST",
@@ -146,6 +167,7 @@ export default function DashboardPage() {
       });
       if (!res.ok) throw new Error("Server error");
       const data: ValidationResult = await res.json();
+      stopDotAnimation();
       setResult(data);
       setPageState("results");
 
@@ -169,6 +191,7 @@ export default function DashboardPage() {
         resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
       }, 100);
     } catch {
+      stopDotAnimation();
       setErrorMsg("Validation failed. Please try again.");
       setPageState("error");
     }
@@ -181,7 +204,16 @@ export default function DashboardPage() {
     setEmails([]);
     setResult(null);
     setErrorMsg(null);
+    setCopied(false);
     if (fileRef.current) fileRef.current.value = "";
+  };
+
+  const handleCopy = () => {
+    if (!result) return;
+    navigator.clipboard.writeText(result.valid.join("\n")).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    });
   };
 
   if (!isLoaded) {
@@ -196,6 +228,8 @@ export default function DashboardPage() {
     result && result.total > 0
       ? Math.round((result.valid.length / result.total) * 100)
       : 0;
+
+  const dots = ".".repeat(loadingDot + 1).padEnd(3, "\u00a0");
 
   return (
     <div className="flex min-h-screen bg-slate-50">
@@ -264,7 +298,7 @@ export default function DashboardPage() {
               </p>
               <Link
                 href="/#pricing"
-                className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-indigo-700"
+                className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-2 text-xs font-semibold text-white transition-all hover:bg-indigo-700"
               >
                 <Crown className="h-3 w-3" />
                 Upgrade to Pro
@@ -347,45 +381,23 @@ export default function DashboardPage() {
 
           {/* Stats */}
           <div className="mb-8 grid grid-cols-3 gap-4">
-            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50">
-                  <TrendingUp className="h-5 w-5 text-indigo-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-extrabold text-slate-900">
-                    {totalCleaned.toLocaleString()}
-                  </p>
-                  <p className="text-xs text-slate-500">Emails cleaned</p>
-                </div>
-              </div>
-            </div>
-            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50">
-                  <Upload className="h-5 w-5 text-emerald-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-extrabold text-slate-900">
-                    {totalUploads}
-                  </p>
-                  <p className="text-xs text-slate-500">Total uploads</p>
+            {[
+              { icon: TrendingUp, value: totalCleaned.toLocaleString(), label: "Emails cleaned", iconBg: "bg-indigo-50", iconColor: "text-indigo-600" },
+              { icon: Upload, value: String(totalUploads), label: "Total uploads", iconBg: "bg-emerald-50", iconColor: "text-emerald-600" },
+              { icon: Zap, value: plan === "free" ? String(FREE_LIMIT) : "∞", label: "Email limit", iconBg: "bg-violet-50", iconColor: "text-violet-600" },
+            ].map(({ icon: Icon, value, label, iconBg, iconColor }) => (
+              <div key={label} className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-all duration-200 hover:scale-[1.02] hover:shadow-md">
+                <div className="flex items-center gap-3">
+                  <div className={cn("flex h-10 w-10 items-center justify-center rounded-xl", iconBg)}>
+                    <Icon className={cn("h-5 w-5", iconColor)} />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-extrabold text-slate-900">{value}</p>
+                    <p className="text-xs text-slate-500">{label}</p>
+                  </div>
                 </div>
               </div>
-            </div>
-            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-50">
-                  <Zap className="h-5 w-5 text-violet-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-extrabold text-slate-900">
-                    {plan === "free" ? `${FREE_LIMIT}` : "∞"}
-                  </p>
-                  <p className="text-xs text-slate-500">Email limit</p>
-                </div>
-              </div>
-            </div>
+            ))}
           </div>
 
           {/* Upload Tab */}
@@ -403,72 +415,127 @@ export default function DashboardPage() {
                         : "Pro plan: unlimited emails"}
                     </p>
                   </div>
-                  {plan === "free" && (
+                  {pageState === "results" ? (
+                    <button
+                      onClick={handleReset}
+                      className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition-all hover:border-slate-300 hover:bg-slate-50"
+                    >
+                      <RefreshCw className="h-3 w-3" /> New upload
+                    </button>
+                  ) : plan === "free" && (
                     <span className="rounded-lg bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
                       {FREE_LIMIT} email limit
                     </span>
                   )}
                 </div>
 
-                {/* Error */}
+                {/* Error banner */}
                 {pageState === "error" && errorMsg && (
-                  <div className="mb-4 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3">
-                    <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-500" />
-                    <div>
-                      <p className="text-sm text-red-700">{errorMsg}</p>
+                  <div className="mb-5 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3.5">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-red-100">
+                      <AlertCircle className="h-4 w-4 text-red-500" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-red-800">Upload failed</p>
+                      <p className="mt-0.5 text-sm text-red-600">{errorMsg}</p>
                       {errorMsg.includes("Upgrade") && (
                         <Link
                           href="/#pricing"
-                          className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-700"
+                          className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-700"
                         >
-                          See pricing <ArrowRight className="h-3 w-3" />
+                          See Pro plans <ArrowRight className="h-3 w-3" />
                         </Link>
                       )}
+                    </div>
+                    <button onClick={handleReset} className="shrink-0 text-red-400 hover:text-red-600">
+                      <XCircle className="h-4 w-4" />
+                    </button>
+                  </div>
+                )}
+
+                {/* Loading banner */}
+                {pageState === "loading" && (
+                  <div className="mb-5 overflow-hidden rounded-xl border border-indigo-100 bg-gradient-to-r from-indigo-50 to-violet-50 px-5 py-4">
+                    <div className="flex items-center gap-3">
+                      <div className="relative flex h-9 w-9 shrink-0 items-center justify-center">
+                        <div className="absolute inset-0 animate-ping rounded-full bg-indigo-200 opacity-60" />
+                        <div className="relative flex h-9 w-9 items-center justify-center rounded-full bg-indigo-100">
+                          <Loader2 className="h-4 w-4 animate-spin text-indigo-600" />
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-indigo-900">
+                          Cleaning your emails{dots}
+                        </p>
+                        <p className="text-xs text-indigo-500">Checking syntax, domains & duplicates</p>
+                      </div>
+                    </div>
+                    <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-indigo-100">
+                      <div className="h-full animate-[loading_1.5s_ease-in-out_infinite] rounded-full bg-gradient-to-r from-indigo-400 to-violet-500" />
                     </div>
                   </div>
                 )}
 
-                {/* Drop zone */}
-                <button
-                  type="button"
-                  onClick={() => fileRef.current?.click()}
-                  onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-                  onDragLeave={() => setIsDragging(false)}
-                  onDrop={handleDrop}
-                  className={cn(
-                    "group flex w-full cursor-pointer flex-col items-center gap-3 rounded-xl border-2 border-dashed px-6 py-10 transition-all duration-200",
-                    isDragging ? "border-indigo-400 bg-indigo-50" :
-                    (pageState === "file_loaded" || pageState === "results") ? "border-emerald-300 bg-emerald-50" :
-                    pageState === "error" ? "border-red-300 bg-red-50/30" :
-                    "border-slate-200 bg-slate-50 hover:border-indigo-300 hover:bg-indigo-50/40"
-                  )}
-                >
-                  {(pageState === "file_loaded" || pageState === "results" || pageState === "loading") && fileName ? (
-                    <>
-                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100">
-                        <FileText className="h-6 w-6 text-emerald-600" />
-                      </div>
-                      <div className="text-center">
-                        <p className="font-semibold text-emerald-700">{fileName}</p>
-                        <p className="text-sm text-slate-500">{emailCount} emails detected</p>
-                        <p className="text-xs text-slate-400">Click to replace</p>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-indigo-100 transition-transform group-hover:scale-105">
-                        <Upload className="h-6 w-6 text-indigo-600" />
-                      </div>
-                      <div className="text-center">
-                        <p className="font-semibold text-slate-800">Drop file here</p>
-                        <p className="text-sm text-slate-500">
-                          or <span className="text-indigo-600 font-medium">browse to upload</span>
-                        </p>
-                        <p className="mt-1 text-xs text-slate-400">.csv or .txt files only</p>
-                      </div>
-                    </>
-                  )}
-                </button>
+                {/* Success banner */}
+                {pageState === "results" && result && (
+                  <div className="mb-5 flex items-center gap-3 rounded-xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-teal-50 px-4 py-3.5">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-100">
+                      <PartyPopper className="h-4 w-4 text-emerald-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-emerald-900">Your email list is ready!</p>
+                      <p className="text-xs text-emerald-600">{result.valid.length} clean emails ready to download</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Drop zone — hidden when results shown */}
+                {pageState !== "results" && (
+                  <button
+                    type="button"
+                    onClick={() => pageState !== "loading" && fileRef.current?.click()}
+                    onDragOver={(e) => { e.preventDefault(); if (pageState !== "loading") setIsDragging(true); }}
+                    onDragLeave={() => setIsDragging(false)}
+                    onDrop={handleDrop}
+                    disabled={pageState === "loading"}
+                    className={cn(
+                      "group flex w-full cursor-pointer flex-col items-center gap-3 rounded-xl border-2 border-dashed px-6 py-10 transition-all duration-200",
+                      pageState === "loading" && "cursor-wait opacity-60",
+                      isDragging ? "scale-[1.01] border-indigo-400 bg-indigo-50" :
+                      pageState === "file_loaded" ? "border-emerald-300 bg-emerald-50" :
+                      pageState === "error" ? "border-red-200 bg-red-50/30" :
+                      "border-slate-200 bg-slate-50 hover:border-indigo-300 hover:bg-indigo-50/40"
+                    )}
+                  >
+                    {(pageState === "file_loaded" || pageState === "loading") && fileName ? (
+                      <>
+                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 transition-transform duration-200 group-hover:scale-105">
+                          <FileText className="h-6 w-6 text-emerald-600" />
+                        </div>
+                        <div className="text-center">
+                          <p className="font-semibold text-emerald-700">{fileName}</p>
+                          <p className="text-sm text-slate-500">{emailCount} emails detected</p>
+                          {pageState !== "loading" && <p className="text-xs text-slate-400">Click to replace</p>}
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-indigo-100 transition-transform duration-200 group-hover:scale-110">
+                          <Upload className="h-6 w-6 text-indigo-600" />
+                        </div>
+                        <div className="text-center">
+                          <p className="font-semibold text-slate-800">
+                            {pageState === "error" ? "Try another file" : "Upload a file to get started"}
+                          </p>
+                          <p className="text-sm text-slate-500">
+                            Drop here or <span className="font-medium text-indigo-600">browse to upload</span>
+                          </p>
+                          <p className="mt-1 text-xs text-slate-400">.csv or .txt files only</p>
+                        </div>
+                      </>
+                    )}
+                  </button>
+                )}
                 <input
                   ref={fileRef}
                   type="file"
@@ -477,74 +544,89 @@ export default function DashboardPage() {
                   onChange={(e) => { const f = e.target.files?.[0]; if (f) processFile(f); }}
                 />
 
-                <button
-                  onClick={handleValidate}
-                  disabled={pageState !== "file_loaded" || emailCount === 0}
-                  className={cn(
-                    "mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl px-6 py-3.5 text-sm font-semibold text-white shadow-sm transition-all",
-                    pageState === "file_loaded" && emailCount > 0
-                      ? "bg-indigo-600 hover:bg-indigo-700 hover:shadow-md"
-                      : pageState === "loading"
-                      ? "cursor-wait bg-indigo-400"
-                      : "cursor-not-allowed bg-slate-300"
-                  )}
-                >
-                  {pageState === "loading" ? (
-                    <><Loader2 className="h-4 w-4 animate-spin" /> Validating…</>
-                  ) : pageState === "file_loaded" && emailCount > 0 ? (
-                    <>Validate Emails <ArrowRight className="h-4 w-4" /></>
-                  ) : (
-                    "Upload a file to continue"
-                  )}
-                </button>
+                {/* Validate button */}
+                {(pageState === "file_loaded" || pageState === "loading") && (
+                  <button
+                    onClick={handleValidate}
+                    disabled={pageState === "loading"}
+                    className={cn(
+                      "mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl px-6 py-3.5 text-sm font-semibold text-white shadow-sm transition-all duration-200",
+                      pageState === "loading"
+                        ? "cursor-wait bg-indigo-400 shadow-none"
+                        : "bg-indigo-600 hover:bg-indigo-700 hover:shadow-md active:scale-[0.98]"
+                    )}
+                  >
+                    {pageState === "loading" ? (
+                      <><Loader2 className="h-4 w-4 animate-spin" /> Cleaning your emails{dots}</>
+                    ) : (
+                      <>Validate Emails <ArrowRight className="h-4 w-4" /></>
+                    )}
+                  </button>
+                )}
               </div>
 
               {/* Results */}
               {pageState === "results" && result && (
                 <div ref={resultsRef} className="space-y-5">
-                  {/* Summary */}
-                  <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                    <div className="mb-4 flex items-center justify-between">
-                      <h3 className="font-bold text-slate-900">Validation Results</h3>
-                      <button onClick={handleReset} className="text-xs text-slate-500 hover:text-slate-800">
-                        ← New upload
-                      </button>
+
+                  {/* Stat cards */}
+                  <div className="grid grid-cols-3 gap-4">
+                    {[
+                      { label: "Total", value: result.total, color: "text-slate-900", bg: "bg-white", border: "border-slate-200", sub: "processed" },
+                      { label: "Valid", value: result.valid.length, color: "text-emerald-600", bg: "bg-emerald-50", border: "border-emerald-200", sub: "deliverable" },
+                      { label: "Invalid", value: result.invalid.length, color: "text-red-500", bg: "bg-red-50", border: "border-red-200", sub: "removed" },
+                    ].map(({ label, value, color, bg, border, sub }) => (
+                      <div key={label} className={cn("rounded-2xl border p-5 shadow-sm transition-all duration-200 hover:scale-[1.03] hover:shadow-md", bg, border)}>
+                        <p className={cn("text-3xl font-extrabold tabular-nums", color)}>{value}</p>
+                        <p className="mt-1 text-sm font-semibold text-slate-700">{label}</p>
+                        <p className="text-xs text-slate-400">{sub}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Progress bar */}
+                  <div className="rounded-xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
+                    <div className="mb-2 flex items-center justify-between text-xs font-medium">
+                      <span className="text-emerald-600">{validPercent}% deliverable rate</span>
+                      <span className="text-slate-400">{result.total} total emails</span>
                     </div>
-                    <div className="mb-4 grid grid-cols-3 gap-3">
-                      <div className="rounded-xl bg-slate-50 border border-slate-100 p-4 text-center">
-                        <p className="text-2xl font-extrabold text-slate-900">{result.total}</p>
-                        <p className="text-xs text-slate-500 mt-0.5">Total</p>
-                      </div>
-                      <div className="rounded-xl bg-emerald-50 border border-emerald-100 p-4 text-center">
-                        <p className="text-2xl font-extrabold text-emerald-600">{result.valid.length}</p>
-                        <p className="text-xs text-emerald-700 mt-0.5">Valid</p>
-                      </div>
-                      <div className="rounded-xl bg-red-50 border border-red-100 p-4 text-center">
-                        <p className="text-2xl font-extrabold text-red-500">{result.invalid.length}</p>
-                        <p className="text-xs text-red-600 mt-0.5">Invalid</p>
-                      </div>
-                    </div>
-                    <div className="mb-2 h-2.5 w-full overflow-hidden rounded-full bg-slate-100">
+                    <div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-100">
                       <div
                         className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-500 transition-all duration-700"
                         style={{ width: `${validPercent}%` }}
                       />
                     </div>
-                    <p className="text-right text-xs text-slate-400">{validPercent}% deliverable</p>
                   </div>
 
-                  {/* Download */}
+                  {/* Action buttons */}
                   {result.valid.length > 0 && (
-                    <button
-                      onClick={() => downloadTxt("clean_emails.txt", result.valid.join("\n"))}
-                      className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-indigo-700 hover:shadow-md"
-                    >
-                      <Download className="h-4 w-4" />
-                      Download Clean Emails ({result.valid.length})
-                    </button>
+                    <div className="flex flex-wrap gap-3">
+                      <button
+                        onClick={() => downloadTxt("clean_emails.txt", result.valid.join("\n"))}
+                        className="group inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 py-3 text-sm font-semibold text-white shadow-md transition-all duration-200 hover:-translate-y-0.5 hover:bg-indigo-700 hover:shadow-lg active:scale-[0.98]"
+                      >
+                        <Download className="h-4 w-4 transition-transform duration-200 group-hover:-translate-y-0.5" />
+                        Download Clean List ({result.valid.length})
+                      </button>
+                      <button
+                        onClick={handleCopy}
+                        className={cn(
+                          "inline-flex items-center gap-2 rounded-xl border px-5 py-3 text-sm font-semibold shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:scale-[0.98]",
+                          copied
+                            ? "border-emerald-300 bg-emerald-50 text-emerald-700"
+                            : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+                        )}
+                      >
+                        {copied ? (
+                          <><ClipboardCheck className="h-4 w-4" /> Copied!</>
+                        ) : (
+                          <><Copy className="h-4 w-4" /> Copy Valid Emails</>
+                        )}
+                      </button>
+                    </div>
                   )}
 
-                  {/* Table */}
+                  {/* Email list table */}
                   <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
                     <div className="grid grid-cols-2 divide-x divide-slate-200">
                       <div>
@@ -558,7 +640,7 @@ export default function DashboardPage() {
                           ) : (
                             <ul className="divide-y divide-slate-100">
                               {result.valid.map((email, i) => (
-                                <li key={i} className="flex items-center gap-2 px-5 py-2 hover:bg-slate-50">
+                                <li key={i} className="flex items-center gap-2 px-5 py-2 transition-colors hover:bg-emerald-50/50">
                                   <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-400" />
                                   <span className="truncate font-mono text-xs text-slate-700">{email}</span>
                                 </li>
@@ -578,7 +660,7 @@ export default function DashboardPage() {
                           ) : (
                             <ul className="divide-y divide-slate-100">
                               {result.invalid.map((email, i) => (
-                                <li key={i} className="flex items-center gap-2 px-5 py-2 hover:bg-slate-50">
+                                <li key={i} className="flex items-center gap-2 px-5 py-2 transition-colors hover:bg-red-50/50">
                                   <XCircle className="h-3.5 w-3.5 shrink-0 text-red-400" />
                                   <span className="truncate font-mono text-xs text-slate-700">{email}</span>
                                 </li>
@@ -612,7 +694,7 @@ export default function DashboardPage() {
                   </div>
                   <button
                     onClick={() => setActiveTab("upload")}
-                    className="mt-2 inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700"
+                    className="mt-2 inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-indigo-700 hover:shadow-md"
                   >
                     <Upload className="h-4 w-4" /> Upload your first list
                   </button>
@@ -634,7 +716,7 @@ export default function DashboardPage() {
                       {history.map((rec) => {
                         const rate = rec.total > 0 ? Math.round((rec.valid / rec.total) * 100) : 0;
                         return (
-                          <tr key={rec.id} className="hover:bg-slate-50 transition-colors">
+                          <tr key={rec.id} className="transition-colors hover:bg-slate-50">
                             <td className="px-6 py-3.5">
                               <div className="flex items-center gap-2">
                                 <FileText className="h-4 w-4 shrink-0 text-slate-400" />
