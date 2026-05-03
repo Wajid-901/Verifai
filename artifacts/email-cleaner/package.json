@@ -10,11 +10,12 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@clerk/nextjs": "^7.3.0",
+    "clsx": "catalog:",
+    "lucide-react": "catalog:",
     "next": "^15.3.2",
     "react": "catalog:",
     "react-dom": "catalog:",
-    "lucide-react": "catalog:",
-    "clsx": "catalog:",
     "tailwind-merge": "catalog:"
   },
   "devDependencies": {
@@ -22,8 +23,8 @@
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
+    "postcss": "^8.5.3",
     "tailwindcss": "catalog:",
-    "typescript": "~5.9.2",
-    "postcss": "^8.5.3"
+    "typescript": "~5.9.2"
   }
 }
