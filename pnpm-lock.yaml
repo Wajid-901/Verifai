@@ -237,12 +237,18 @@ importers:
       clsx:
         specifier: 'catalog:'
         version: 2.1.1
+      drizzle-orm:
+        specifier: 'catalog:'
+        version: 0.45.2(@types/pg@8.18.0)(pg@8.20.0)
       lucide-react:
         specifier: 'catalog:'
         version: 0.545.0(react@19.1.0)
       next:
         specifier: ^15.3.2
         version: 15.5.15(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      pg:
+        specifier: ^8.14.1
+        version: 8.20.0
       react:
         specifier: 'catalog:'
         version: 19.1.0
@@ -259,6 +265,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 25.3.5
+      '@types/pg':
+        specifier: ^8.11.14
+        version: 8.18.0
       '@types/react':
         specifier: 'catalog:'
         version: 19.2.14
