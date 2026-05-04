@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuth } from "@clerk/nextjs";
+import { useAuth, useUser } from "@clerk/nextjs";
 import { useState, useRef, useCallback } from "react";
 import Link from "next/link";
 import {
@@ -97,6 +97,7 @@ function downloadTxt(filename: string, content: string) {
 
 export default function Home() {
   const { isSignedIn, isLoaded } = useAuth();
+  const { user } = useUser();
 
   const [appState, setAppState] = useState<AppState>("idle");
   const [isDragging, setIsDragging] = useState(false);
@@ -227,17 +228,30 @@ export default function Home() {
           </div>
           <nav className="hidden items-center gap-8 md:flex">
             <a href="#features" className="text-sm font-medium text-slate-500 transition-colors hover:text-slate-900">Features</a>
-            <a href="#pricing" className="text-sm font-medium text-slate-500 transition-colors hover:text-slate-900">Pricing</a>
+            <Link href="/pricing" className="text-sm font-medium text-slate-500 transition-colors hover:text-slate-900">Pricing</Link>
           </nav>
           <div className="flex items-center gap-3">
             {isLoaded && isSignedIn ? (
-              <Link
-                href="/dashboard"
-                className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-indigo-700 hover:shadow-md"
-              >
-                <LayoutDashboard className="h-4 w-4" />
-                Dashboard
-              </Link>
+              <div className="flex items-center gap-3">
+                <div className="hidden items-center gap-2 md:flex">
+                  {user?.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={user.imageUrl} alt={user.fullName ?? "User"} className="h-8 w-8 rounded-full object-cover ring-2 ring-slate-200" />
+                  ) : (
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-100 text-sm font-bold text-indigo-700">
+                      {user?.firstName?.[0] ?? user?.emailAddresses?.[0]?.emailAddress?.[0]?.toUpperCase() ?? "U"}
+                    </div>
+                  )}
+                  <span className="text-sm font-medium text-slate-700">{user?.firstName ?? user?.emailAddresses?.[0]?.emailAddress}</span>
+                </div>
+                <Link
+                  href="/dashboard"
+                  className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-indigo-700 hover:shadow-md"
+                >
+                  <LayoutDashboard className="h-4 w-4" />
+                  Dashboard
+                </Link>
+              </div>
             ) : (
               <>
                 <Link href="/sign-in" className="hidden text-sm font-medium text-slate-600 transition-colors hover:text-slate-900 md:block">

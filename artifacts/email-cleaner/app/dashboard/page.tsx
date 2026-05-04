@@ -12,7 +12,6 @@ import {
   AlertCircle,
   Zap,
   Crown,
-  BarChart3,
   History,
   LogOut,
   Mail,
@@ -23,6 +22,9 @@ import {
   ClipboardCheck,
   PartyPopper,
   RefreshCw,
+  LayoutDashboard,
+  Sparkles,
+  ChevronRight,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -48,8 +50,7 @@ interface ValidationResult {
 }
 
 function extractEmails(content: string): string[] {
-  const lines = content.split(/[\r\n,;]+/);
-  return lines.map((l) => l.trim()).filter(Boolean);
+  return content.split(/[\r\n,;]+/).map((l) => l.trim()).filter(Boolean);
 }
 
 function downloadTxt(filename: string, content: string) {
@@ -68,9 +69,7 @@ function useLocalStorage<T>(key: string, initial: T) {
     try {
       const stored = localStorage.getItem(key);
       if (stored) setValue(JSON.parse(stored) as T);
-    } catch {
-      /* ignore */
-    }
+    } catch { /* ignore */ }
   }, [key]);
   const set = (v: T) => {
     setValue(v);
@@ -80,6 +79,7 @@ function useLocalStorage<T>(key: string, initial: T) {
 }
 
 type PageState = "idle" | "file_loaded" | "loading" | "results" | "error";
+type ActiveTab = "dashboard" | "upload" | "history";
 
 export default function DashboardPage() {
   const { user, isLoaded } = useUser();
@@ -102,51 +102,40 @@ export default function DashboardPage() {
   const fileRef = useRef<HTMLInputElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
   const dotTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const [activeTab, setActiveTab] = useState<"upload" | "history">("upload");
+  const [activeTab, setActiveTab] = useState<ActiveTab>("dashboard");
 
   const startDotAnimation = () => {
-    dotTimerRef.current = setInterval(() => {
-      setLoadingDot((d) => (d + 1) % 4);
-    }, 400);
+    dotTimerRef.current = setInterval(() => setLoadingDot((d) => (d + 1) % 4), 400);
   };
-
   const stopDotAnimation = () => {
-    if (dotTimerRef.current) {
-      clearInterval(dotTimerRef.current);
-      dotTimerRef.current = null;
-    }
+    if (dotTimerRef.current) { clearInterval(dotTimerRef.current); dotTimerRef.current = null; }
   };
 
-  const processFile = useCallback(
-    (file: File) => {
-      const ext = file.name.split(".").pop()?.toLowerCase();
-      if (ext !== "csv" && ext !== "txt") {
-        setErrorMsg("Invalid file type. Upload a .csv or .txt file.");
+  const processFile = useCallback((file: File) => {
+    const ext = file.name.split(".").pop()?.toLowerCase();
+    if (ext !== "csv" && ext !== "txt") {
+      setErrorMsg("Invalid file type. Upload a .csv or .txt file.");
+      setPageState("error");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const content = e.target?.result as string;
+      const extracted = extractEmails(content);
+      if (plan === "free" && extracted.length > FREE_LIMIT) {
+        setErrorMsg(`Free plan is limited to ${FREE_LIMIT} emails per upload. Your file has ${extracted.length} emails. Upgrade to Pro for unlimited.`);
         setPageState("error");
         return;
       }
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const content = e.target?.result as string;
-        const extracted = extractEmails(content);
-        if (plan === "free" && extracted.length > FREE_LIMIT) {
-          setErrorMsg(
-            `Free plan is limited to ${FREE_LIMIT} emails per upload. Your file has ${extracted.length} emails. Upgrade to Pro for unlimited processing.`
-          );
-          setPageState("error");
-          return;
-        }
-        setFileName(file.name);
-        setEmails(extracted);
-        setEmailCount(extracted.length);
-        setResult(null);
-        setErrorMsg(null);
-        setPageState("file_loaded");
-      };
-      reader.readAsText(file);
-    },
-    [plan]
-  );
+      setFileName(file.name);
+      setEmails(extracted);
+      setEmailCount(extracted.length);
+      setResult(null);
+      setErrorMsg(null);
+      setPageState("file_loaded");
+    };
+    reader.readAsText(file);
+  }, [plan]);
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -170,26 +159,18 @@ export default function DashboardPage() {
       stopDotAnimation();
       setResult(data);
       setPageState("results");
-
       const newRecord: UploadRecord = {
         id: Date.now().toString(),
         fileName: fileName ?? "upload.txt",
         total: data.total,
         valid: data.valid.length,
         invalid: data.invalid.length,
-        date: new Date().toLocaleDateString("en-US", {
-          month: "short",
-          day: "numeric",
-          year: "numeric",
-        }),
+        date: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
       };
       setHistory([newRecord, ...history].slice(0, 20));
       setTotalCleaned(totalCleaned + data.valid.length);
       setTotalUploads(totalUploads + 1);
-
-      setTimeout(() => {
-        resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 100);
+      setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
     } catch {
       stopDotAnimation();
       setErrorMsg("Validation failed. Please try again.");
@@ -216,6 +197,11 @@ export default function DashboardPage() {
     });
   };
 
+  const goToUpload = () => {
+    handleReset();
+    setActiveTab("upload");
+  };
+
   if (!isLoaded) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50">
@@ -224,124 +210,116 @@ export default function DashboardPage() {
     );
   }
 
-  const validPercent =
-    result && result.total > 0
-      ? Math.round((result.valid.length / result.total) * 100)
-      : 0;
-
+  const validPercent = result && result.total > 0 ? Math.round((result.valid.length / result.total) * 100) : 0;
   const dots = ".".repeat(loadingDot + 1).padEnd(3, "\u00a0");
+  const overallRate = totalCleaned > 0 && totalUploads > 0 ? Math.round((totalCleaned / (totalCleaned + history.reduce((a, r) => a + r.invalid, 0))) * 100) : 0;
+
+  const navItems: { id: ActiveTab; icon: React.ElementType; label: string }[] = [
+    { id: "dashboard", icon: LayoutDashboard, label: "Dashboard" },
+    { id: "upload", icon: Upload, label: "Upload" },
+    { id: "history", icon: History, label: "History" },
+  ];
+
+  const userInitial = user?.firstName?.[0] ?? user?.emailAddresses?.[0]?.emailAddress?.[0]?.toUpperCase() ?? "U";
+  const userName = user?.fullName ?? user?.firstName ?? user?.emailAddresses?.[0]?.emailAddress ?? "there";
 
   return (
     <div className="flex min-h-screen bg-slate-50">
       {/* Sidebar */}
       <aside className="fixed inset-y-0 left-0 z-30 flex w-64 flex-col border-r border-slate-200 bg-white">
         {/* Logo */}
-        <div className="flex h-16 items-center gap-2 border-b border-slate-100 px-5">
+        <Link href="/" className="flex h-16 items-center gap-2.5 border-b border-slate-100 px-5 transition-opacity hover:opacity-80">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600">
             <Mail className="h-4 w-4 text-white" />
           </div>
           <span className="text-base font-bold text-slate-900">
             Email<span className="text-indigo-600">Cleaner</span>
           </span>
-        </div>
+        </Link>
 
         {/* Nav */}
-        <nav className="flex-1 space-y-1 px-3 py-4">
-          <button
-            onClick={() => setActiveTab("upload")}
-            className={cn(
-              "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
-              activeTab === "upload"
-                ? "bg-indigo-50 text-indigo-700"
-                : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-            )}
-          >
-            <Upload className="h-4 w-4" />
-            New Upload
-          </button>
-          <button
-            onClick={() => setActiveTab("history")}
-            className={cn(
-              "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
-              activeTab === "history"
-                ? "bg-indigo-50 text-indigo-700"
-                : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-            )}
-          >
-            <History className="h-4 w-4" />
-            History
-            {history.length > 0 && (
-              <span className="ml-auto rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600">
-                {history.length}
-              </span>
-            )}
-          </button>
+        <nav className="flex-1 space-y-0.5 px-3 py-4">
+          {navItems.map(({ id, icon: Icon, label }) => (
+            <button
+              key={id}
+              onClick={() => setActiveTab(id)}
+              className={cn(
+                "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150",
+                activeTab === id
+                  ? "bg-indigo-50 text-indigo-700 shadow-sm"
+                  : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+              )}
+            >
+              <Icon className="h-4 w-4 shrink-0" />
+              {label}
+              {id === "history" && history.length > 0 && (
+                <span className="ml-auto rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+                  {history.length}
+                </span>
+              )}
+            </button>
+          ))}
+
+          <div className="my-3 border-t border-slate-100" />
+
           <Link
-            href="/#pricing"
-            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900"
+            href="/pricing"
+            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-600 transition-all hover:bg-slate-50 hover:text-slate-900"
           >
-            <BarChart3 className="h-4 w-4" />
+            <Sparkles className="h-4 w-4 shrink-0" />
             Pricing
           </Link>
         </nav>
 
         {/* Plan badge */}
-        <div className="border-t border-slate-100 p-4">
+        <div className="border-t border-slate-100 px-4 pb-3 pt-4">
           {plan === "free" ? (
-            <div className="rounded-xl bg-gradient-to-br from-indigo-50 to-violet-50 border border-indigo-100 p-3">
-              <div className="flex items-center gap-2 mb-2">
-                <Zap className="h-4 w-4 text-indigo-600" />
+            <div className="rounded-xl border border-indigo-100 bg-gradient-to-br from-indigo-50 to-violet-50 p-3.5">
+              <div className="mb-1.5 flex items-center gap-2">
+                <Zap className="h-3.5 w-3.5 text-indigo-600" />
                 <span className="text-xs font-bold text-indigo-900">Free Plan</span>
               </div>
-              <p className="text-xs text-indigo-700 mb-3">
+              <p className="mb-3 text-xs leading-relaxed text-indigo-700">
                 Limited to {FREE_LIMIT} emails per upload.
               </p>
               <Link
-                href="/#pricing"
-                className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-2 text-xs font-semibold text-white transition-all hover:bg-indigo-700"
+                href="/pricing"
+                className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-2 text-xs font-semibold text-white transition-all hover:bg-indigo-700 hover:shadow-sm"
               >
                 <Crown className="h-3 w-3" />
                 Upgrade to Pro
               </Link>
             </div>
           ) : (
-            <div className="rounded-xl bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-100 p-3">
+            <div className="rounded-xl border border-amber-100 bg-gradient-to-br from-amber-50 to-orange-50 p-3.5">
               <div className="flex items-center gap-2">
-                <Crown className="h-4 w-4 text-amber-600" />
+                <Crown className="h-3.5 w-3.5 text-amber-600" />
                 <span className="text-xs font-bold text-amber-900">Pro Plan</span>
               </div>
-              <p className="text-xs text-amber-700 mt-1">Unlimited emails</p>
+              <p className="mt-1 text-xs text-amber-700">Unlimited emails per upload</p>
             </div>
           )}
         </div>
 
-        {/* User info + sign out */}
+        {/* User + sign out */}
         <div className="border-t border-slate-100 p-4">
-          <div className="flex items-center gap-3">
+          <div className="mb-3 flex items-center gap-3">
             {user?.imageUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={user.imageUrl}
-                alt={user.fullName ?? "User"}
-                className="h-8 w-8 rounded-full object-cover"
-              />
+              <img src={user.imageUrl} alt={userName} className="h-8 w-8 rounded-full object-cover ring-2 ring-slate-100" />
             ) : (
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-100 text-sm font-bold text-indigo-700">
-                {user?.firstName?.[0] ?? user?.emailAddresses?.[0]?.emailAddress?.[0]?.toUpperCase() ?? "U"}
+                {userInitial}
               </div>
             )}
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold text-slate-900">
-                {user?.fullName ?? user?.emailAddresses?.[0]?.emailAddress}
-              </p>
-              <p className="truncate text-xs text-slate-500">
-                {user?.emailAddresses?.[0]?.emailAddress}
-              </p>
+              <p className="truncate text-sm font-semibold text-slate-900">{userName}</p>
+              <p className="truncate text-xs text-slate-400">{user?.emailAddresses?.[0]?.emailAddress}</p>
             </div>
           </div>
           <button
             onClick={() => signOut({ redirectUrl: "/" })}
-            className="mt-3 flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-medium text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-700"
+            className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-medium text-slate-500 transition-colors hover:bg-red-50 hover:text-red-600"
           >
             <LogOut className="h-3.5 w-3.5" />
             Sign out
@@ -353,82 +331,203 @@ export default function DashboardPage() {
       <main className="ml-64 flex-1 overflow-auto">
         <div className="mx-auto max-w-4xl px-8 py-10">
 
-          {/* Header */}
-          <div className="mb-8 flex items-start justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-slate-900">
-                Welcome back, {user?.firstName ?? "there"} 👋
-              </h1>
-              <p className="mt-1 text-slate-500">
-                {activeTab === "upload"
-                  ? "Upload a new email list to get started."
-                  : "Your upload history and validation results."}
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              {plan === "free" && (
-                <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600">
-                  Free Plan
-                </span>
-              )}
-              {plan === "pro" && (
-                <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">
-                  <Crown className="h-3 w-3" /> Pro
-                </span>
-              )}
-            </div>
-          </div>
-
-          {/* Stats */}
-          <div className="mb-8 grid grid-cols-3 gap-4">
-            {[
-              { icon: TrendingUp, value: totalCleaned.toLocaleString(), label: "Emails cleaned", iconBg: "bg-indigo-50", iconColor: "text-indigo-600" },
-              { icon: Upload, value: String(totalUploads), label: "Total uploads", iconBg: "bg-emerald-50", iconColor: "text-emerald-600" },
-              { icon: Zap, value: plan === "free" ? String(FREE_LIMIT) : "∞", label: "Email limit", iconBg: "bg-violet-50", iconColor: "text-violet-600" },
-            ].map(({ icon: Icon, value, label, iconBg, iconColor }) => (
-              <div key={label} className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-all duration-200 hover:scale-[1.02] hover:shadow-md">
-                <div className="flex items-center gap-3">
-                  <div className={cn("flex h-10 w-10 items-center justify-center rounded-xl", iconBg)}>
-                    <Icon className={cn("h-5 w-5", iconColor)} />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-extrabold text-slate-900">{value}</p>
-                    <p className="text-xs text-slate-500">{label}</p>
-                  </div>
-                </div>
+          {/* ─────────────────── DASHBOARD TAB ─────────────────── */}
+          {activeTab === "dashboard" && (
+            <div className="space-y-8">
+              {/* Header */}
+              <div>
+                <h1 className="text-2xl font-bold text-slate-900">
+                  Welcome back, {user?.firstName ?? "there"} 👋
+                </h1>
+                <p className="mt-1 text-slate-500">
+                  {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
+                </p>
               </div>
-            ))}
-          </div>
 
-          {/* Upload Tab */}
-          {activeTab === "upload" && (
-            <div className="space-y-6">
-              <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
-                <div className="mb-5 flex items-center justify-between">
+              {/* Stats row */}
+              <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+                {[
+                  {
+                    icon: TrendingUp, value: totalCleaned.toLocaleString(),
+                    label: "Emails cleaned", iconBg: "bg-indigo-50", iconColor: "text-indigo-600",
+                    border: "border-slate-200",
+                  },
+                  {
+                    icon: Upload, value: String(totalUploads),
+                    label: "Total uploads", iconBg: "bg-emerald-50", iconColor: "text-emerald-600",
+                    border: "border-slate-200",
+                  },
+                  {
+                    icon: CheckCircle2, value: totalUploads > 0 ? `${overallRate}%` : "—",
+                    label: "Avg. valid rate", iconBg: "bg-teal-50", iconColor: "text-teal-600",
+                    border: "border-slate-200",
+                  },
+                  {
+                    icon: Zap, value: plan === "free" ? `${FREE_LIMIT}` : "∞",
+                    label: "Email limit", iconBg: "bg-violet-50", iconColor: "text-violet-600",
+                    border: plan === "pro" ? "border-amber-200" : "border-slate-200",
+                  },
+                ].map(({ icon: Icon, value, label, iconBg, iconColor, border }) => (
+                  <div key={label} className={cn("rounded-2xl border bg-white p-5 shadow-sm transition-all duration-200 hover:scale-[1.02] hover:shadow-md", border)}>
+                    <div className={cn("mb-3 inline-flex h-9 w-9 items-center justify-center rounded-xl", iconBg)}>
+                      <Icon className={cn("h-4.5 w-4.5", iconColor)} />
+                    </div>
+                    <p className="text-2xl font-extrabold tabular-nums text-slate-900">{value}</p>
+                    <p className="mt-0.5 text-xs text-slate-500">{label}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Quick actions */}
+              <div className="grid gap-4 md:grid-cols-2">
+                <button
+                  onClick={goToUpload}
+                  className="group flex items-center justify-between rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-50 to-violet-50 p-6 text-left shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+                >
                   <div>
-                    <h2 className="text-base font-bold text-slate-900">
-                      Upload email list
-                    </h2>
+                    <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600 shadow-sm">
+                      <Upload className="h-5 w-5 text-white" />
+                    </div>
+                    <p className="font-bold text-slate-900">Upload New File</p>
+                    <p className="mt-0.5 text-sm text-slate-500">Clean your next email list</p>
+                  </div>
+                  <ChevronRight className="h-5 w-5 shrink-0 text-indigo-400 transition-transform duration-200 group-hover:translate-x-0.5" />
+                </button>
+
+                <button
+                  onClick={() => setActiveTab("history")}
+                  className="group flex items-center justify-between rounded-2xl border border-slate-200 bg-white p-6 text-left shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+                >
+                  <div>
+                    <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 shadow-sm">
+                      <History className="h-5 w-5 text-slate-600" />
+                    </div>
+                    <p className="font-bold text-slate-900">View History</p>
                     <p className="mt-0.5 text-sm text-slate-500">
-                      {plan === "free"
-                        ? `Free plan: up to ${FREE_LIMIT} emails per upload`
-                        : "Pro plan: unlimited emails"}
+                      {history.length > 0 ? `${history.length} previous upload${history.length !== 1 ? "s" : ""}` : "No uploads yet"}
                     </p>
                   </div>
-                  {pageState === "results" ? (
-                    <button
-                      onClick={handleReset}
-                      className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition-all hover:border-slate-300 hover:bg-slate-50"
-                    >
-                      <RefreshCw className="h-3 w-3" /> New upload
-                    </button>
-                  ) : plan === "free" && (
-                    <span className="rounded-lg bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
-                      {FREE_LIMIT} email limit
-                    </span>
-                  )}
-                </div>
+                  <ChevronRight className="h-5 w-5 shrink-0 text-slate-400 transition-transform duration-200 group-hover:translate-x-0.5" />
+                </button>
+              </div>
 
+              {/* Recent activity */}
+              {history.length > 0 && (
+                <div>
+                  <div className="mb-4 flex items-center justify-between">
+                    <h2 className="font-bold text-slate-900">Recent uploads</h2>
+                    <button
+                      onClick={() => setActiveTab("history")}
+                      className="text-xs font-medium text-indigo-600 hover:text-indigo-700"
+                    >
+                      View all →
+                    </button>
+                  </div>
+                  <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-slate-100 bg-slate-50">
+                          <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">File</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Date</th>
+                          <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-slate-500">Valid</th>
+                          <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-slate-500">Rate</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {history.slice(0, 5).map((rec) => {
+                          const rate = rec.total > 0 ? Math.round((rec.valid / rec.total) * 100) : 0;
+                          return (
+                            <tr key={rec.id} className="transition-colors hover:bg-slate-50">
+                              <td className="px-5 py-3">
+                                <div className="flex items-center gap-2">
+                                  <FileText className="h-4 w-4 shrink-0 text-slate-400" />
+                                  <span className="max-w-[180px] truncate font-medium text-slate-800">{rec.fileName}</span>
+                                </div>
+                              </td>
+                              <td className="px-4 py-3 text-slate-500">{rec.date}</td>
+                              <td className="px-4 py-3 text-center font-medium text-emerald-600">{rec.valid}</td>
+                              <td className="px-4 py-3 text-center">
+                                <span className={cn(
+                                  "inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold",
+                                  rate >= 80 ? "bg-emerald-100 text-emerald-700" :
+                                  rate >= 50 ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700"
+                                )}>{rate}%</span>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* First-time empty state */}
+              {history.length === 0 && (
+                <div className="flex flex-col items-center gap-4 rounded-2xl border border-dashed border-slate-200 bg-white py-16 text-center">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-indigo-50">
+                    <Upload className="h-7 w-7 text-indigo-400" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-slate-700">No uploads yet</p>
+                    <p className="mt-1 text-sm text-slate-400">Upload your first email list to see stats here</p>
+                  </div>
+                  <button
+                    onClick={goToUpload}
+                    className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-indigo-700 hover:shadow-md"
+                  >
+                    <Upload className="h-4 w-4" /> Upload your first list
+                  </button>
+                </div>
+              )}
+
+              {/* Upgrade CTA for free users */}
+              {plan === "free" && (
+                <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-600 via-indigo-600 to-violet-700 p-6 text-white shadow-lg">
+                  <div className="pointer-events-none absolute right-0 top-0 h-40 w-40 translate-x-8 -translate-y-8 rounded-full bg-white/10 blur-2xl" />
+                  <div className="pointer-events-none absolute bottom-0 left-20 h-24 w-24 rounded-full bg-violet-400/20 blur-xl" />
+                  <div className="relative flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                    <div>
+                      <div className="mb-1.5 flex items-center gap-2">
+                        <Crown className="h-4 w-4 text-amber-300" />
+                        <span className="text-xs font-bold uppercase tracking-wider text-indigo-200">Pro Plan</span>
+                      </div>
+                      <h3 className="text-lg font-bold">Unlock unlimited email validation</h3>
+                      <p className="mt-1 text-sm text-indigo-200">Process millions of emails, advanced MX checks, priority speed.</p>
+                    </div>
+                    <Link
+                      href="/pricing"
+                      className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-indigo-700 shadow-md transition-all hover:-translate-y-0.5 hover:shadow-lg"
+                    >
+                      View pricing <ArrowRight className="h-4 w-4" />
+                    </Link>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ─────────────────── UPLOAD TAB ─────────────────── */}
+          {activeTab === "upload" && (
+            <div className="space-y-6">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h1 className="text-2xl font-bold text-slate-900">Upload</h1>
+                  <p className="mt-1 text-slate-500">
+                    {plan === "free" ? `Free plan: up to ${FREE_LIMIT} emails per upload` : "Pro plan: unlimited emails"}
+                  </p>
+                </div>
+                {pageState === "results" && (
+                  <button
+                    onClick={handleReset}
+                    className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition-all hover:border-slate-300 hover:bg-slate-50"
+                  >
+                    <RefreshCw className="h-3 w-3" /> New upload
+                  </button>
+                )}
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
                 {/* Error banner */}
                 {pageState === "error" && errorMsg && (
                   <div className="mb-5 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3.5">
@@ -439,10 +538,7 @@ export default function DashboardPage() {
                       <p className="text-sm font-medium text-red-800">Upload failed</p>
                       <p className="mt-0.5 text-sm text-red-600">{errorMsg}</p>
                       {errorMsg.includes("Upgrade") && (
-                        <Link
-                          href="/#pricing"
-                          className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-700"
-                        >
+                        <Link href="/pricing" className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-700">
                           See Pro plans <ArrowRight className="h-3 w-3" />
                         </Link>
                       )}
@@ -464,9 +560,7 @@ export default function DashboardPage() {
                         </div>
                       </div>
                       <div>
-                        <p className="text-sm font-semibold text-indigo-900">
-                          Cleaning your emails{dots}
-                        </p>
+                        <p className="text-sm font-semibold text-indigo-900">Cleaning your emails{dots}</p>
                         <p className="text-xs text-indigo-500">Checking syntax, domains & duplicates</p>
                       </div>
                     </div>
@@ -489,7 +583,7 @@ export default function DashboardPage() {
                   </div>
                 )}
 
-                {/* Drop zone — hidden when results shown */}
+                {/* Drop zone */}
                 {pageState !== "results" && (
                   <button
                     type="button"
@@ -500,7 +594,7 @@ export default function DashboardPage() {
                     disabled={pageState === "loading"}
                     className={cn(
                       "group flex w-full cursor-pointer flex-col items-center gap-3 rounded-xl border-2 border-dashed px-6 py-10 transition-all duration-200",
-                      pageState === "loading" && "cursor-wait opacity-60",
+                      pageState === "loading" ? "cursor-wait opacity-60" : "",
                       isDragging ? "scale-[1.01] border-indigo-400 bg-indigo-50" :
                       pageState === "file_loaded" ? "border-emerald-300 bg-emerald-50" :
                       pageState === "error" ? "border-red-200 bg-red-50/30" :
@@ -536,13 +630,8 @@ export default function DashboardPage() {
                     )}
                   </button>
                 )}
-                <input
-                  ref={fileRef}
-                  type="file"
-                  accept=".csv,.txt"
-                  className="hidden"
-                  onChange={(e) => { const f = e.target.files?.[0]; if (f) processFile(f); }}
-                />
+                <input ref={fileRef} type="file" accept=".csv,.txt" className="hidden"
+                  onChange={(e) => { const f = e.target.files?.[0]; if (f) processFile(f); }} />
 
                 {/* Validate button */}
                 {(pageState === "file_loaded" || pageState === "loading") && (
@@ -556,11 +645,9 @@ export default function DashboardPage() {
                         : "bg-indigo-600 hover:bg-indigo-700 hover:shadow-md active:scale-[0.98]"
                     )}
                   >
-                    {pageState === "loading" ? (
-                      <><Loader2 className="h-4 w-4 animate-spin" /> Cleaning your emails{dots}</>
-                    ) : (
-                      <>Validate Emails <ArrowRight className="h-4 w-4" /></>
-                    )}
+                    {pageState === "loading"
+                      ? <><Loader2 className="h-4 w-4 animate-spin" /> Cleaning your emails{dots}</>
+                      : <>Validate Emails <ArrowRight className="h-4 w-4" /></>}
                   </button>
                 )}
               </div>
@@ -568,8 +655,6 @@ export default function DashboardPage() {
               {/* Results */}
               {pageState === "results" && result && (
                 <div ref={resultsRef} className="space-y-5">
-
-                  {/* Stat cards */}
                   <div className="grid grid-cols-3 gap-4">
                     {[
                       { label: "Total", value: result.total, color: "text-slate-900", bg: "bg-white", border: "border-slate-200", sub: "processed" },
@@ -584,21 +669,16 @@ export default function DashboardPage() {
                     ))}
                   </div>
 
-                  {/* Progress bar */}
                   <div className="rounded-xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
                     <div className="mb-2 flex items-center justify-between text-xs font-medium">
                       <span className="text-emerald-600">{validPercent}% deliverable rate</span>
                       <span className="text-slate-400">{result.total} total emails</span>
                     </div>
                     <div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-100">
-                      <div
-                        className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-500 transition-all duration-700"
-                        style={{ width: `${validPercent}%` }}
-                      />
+                      <div className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-500 transition-all duration-700" style={{ width: `${validPercent}%` }} />
                     </div>
                   </div>
 
-                  {/* Action buttons */}
                   {result.valid.length > 0 && (
                     <div className="flex flex-wrap gap-3">
                       <button
@@ -612,21 +692,14 @@ export default function DashboardPage() {
                         onClick={handleCopy}
                         className={cn(
                           "inline-flex items-center gap-2 rounded-xl border px-5 py-3 text-sm font-semibold shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:scale-[0.98]",
-                          copied
-                            ? "border-emerald-300 bg-emerald-50 text-emerald-700"
-                            : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+                          copied ? "border-emerald-300 bg-emerald-50 text-emerald-700" : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
                         )}
                       >
-                        {copied ? (
-                          <><ClipboardCheck className="h-4 w-4" /> Copied!</>
-                        ) : (
-                          <><Copy className="h-4 w-4" /> Copy Valid Emails</>
-                        )}
+                        {copied ? <><ClipboardCheck className="h-4 w-4" /> Copied!</> : <><Copy className="h-4 w-4" /> Copy Valid Emails</>}
                       </button>
                     </div>
                   )}
 
-                  {/* Email list table */}
                   <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
                     <div className="grid grid-cols-2 divide-x divide-slate-200">
                       <div>
@@ -635,18 +708,16 @@ export default function DashboardPage() {
                           <span className="text-sm font-semibold text-emerald-800">Valid ({result.valid.length})</span>
                         </div>
                         <div className="max-h-72 overflow-y-auto">
-                          {result.valid.length === 0 ? (
-                            <p className="px-5 py-6 text-center text-sm text-slate-400">None</p>
-                          ) : (
-                            <ul className="divide-y divide-slate-100">
-                              {result.valid.map((email, i) => (
-                                <li key={i} className="flex items-center gap-2 px-5 py-2 transition-colors hover:bg-emerald-50/50">
-                                  <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-400" />
-                                  <span className="truncate font-mono text-xs text-slate-700">{email}</span>
-                                </li>
-                              ))}
-                            </ul>
-                          )}
+                          {result.valid.length === 0
+                            ? <p className="px-5 py-6 text-center text-sm text-slate-400">None</p>
+                            : <ul className="divide-y divide-slate-100">
+                                {result.valid.map((email, i) => (
+                                  <li key={i} className="flex items-center gap-2 px-5 py-2 transition-colors hover:bg-emerald-50/50">
+                                    <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-400" />
+                                    <span className="truncate font-mono text-xs text-slate-700">{email}</span>
+                                  </li>
+                                ))}
+                              </ul>}
                         </div>
                       </div>
                       <div>
@@ -655,18 +726,16 @@ export default function DashboardPage() {
                           <span className="text-sm font-semibold text-red-800">Invalid ({result.invalid.length})</span>
                         </div>
                         <div className="max-h-72 overflow-y-auto">
-                          {result.invalid.length === 0 ? (
-                            <p className="px-5 py-6 text-center text-sm text-slate-400">None</p>
-                          ) : (
-                            <ul className="divide-y divide-slate-100">
-                              {result.invalid.map((email, i) => (
-                                <li key={i} className="flex items-center gap-2 px-5 py-2 transition-colors hover:bg-red-50/50">
-                                  <XCircle className="h-3.5 w-3.5 shrink-0 text-red-400" />
-                                  <span className="truncate font-mono text-xs text-slate-700">{email}</span>
-                                </li>
-                              ))}
-                            </ul>
-                          )}
+                          {result.invalid.length === 0
+                            ? <p className="px-5 py-6 text-center text-sm text-slate-400">None</p>
+                            : <ul className="divide-y divide-slate-100">
+                                {result.invalid.map((email, i) => (
+                                  <li key={i} className="flex items-center gap-2 px-5 py-2 transition-colors hover:bg-red-50/50">
+                                    <XCircle className="h-3.5 w-3.5 shrink-0 text-red-400" />
+                                    <span className="truncate font-mono text-xs text-slate-700">{email}</span>
+                                  </li>
+                                ))}
+                              </ul>}
                         </div>
                       </div>
                     </div>
@@ -676,78 +745,74 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {/* History Tab */}
+          {/* ─────────────────── HISTORY TAB ─────────────────── */}
           {activeTab === "history" && (
-            <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-              <div className="border-b border-slate-100 px-6 py-4">
-                <h2 className="font-bold text-slate-900">Upload History</h2>
-                <p className="text-sm text-slate-500 mt-0.5">Your last {history.length} upload{history.length !== 1 ? "s" : ""}</p>
+            <div className="space-y-6">
+              <div>
+                <h1 className="text-2xl font-bold text-slate-900">History</h1>
+                <p className="mt-1 text-slate-500">All your previous validation runs</p>
               </div>
-              {history.length === 0 ? (
-                <div className="flex flex-col items-center gap-4 py-20">
-                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-100">
-                    <Inbox className="h-7 w-7 text-slate-400" />
+
+              <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                {history.length === 0 ? (
+                  <div className="flex flex-col items-center gap-4 py-20">
+                    <div className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-100">
+                      <Inbox className="h-7 w-7 text-slate-400" />
+                    </div>
+                    <div className="text-center">
+                      <p className="font-semibold text-slate-700">No uploads yet</p>
+                      <p className="mt-1 text-sm text-slate-400">Your validation history will appear here</p>
+                    </div>
+                    <button
+                      onClick={goToUpload}
+                      className="mt-2 inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-indigo-700 hover:shadow-md"
+                    >
+                      <Upload className="h-4 w-4" /> Upload your first list
+                    </button>
                   </div>
-                  <div className="text-center">
-                    <p className="font-semibold text-slate-700">No uploads yet</p>
-                    <p className="text-sm text-slate-400 mt-1">Your validation history will appear here</p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-slate-100 bg-slate-50 text-left">
+                          <th className="px-6 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">File</th>
+                          <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Date</th>
+                          <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-slate-500">Total</th>
+                          <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-slate-500">Valid</th>
+                          <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-slate-500">Invalid</th>
+                          <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-slate-500">Rate</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {history.map((rec) => {
+                          const rate = rec.total > 0 ? Math.round((rec.valid / rec.total) * 100) : 0;
+                          return (
+                            <tr key={rec.id} className="transition-colors hover:bg-slate-50">
+                              <td className="px-6 py-3.5">
+                                <div className="flex items-center gap-2">
+                                  <FileText className="h-4 w-4 shrink-0 text-slate-400" />
+                                  <span className="max-w-[160px] truncate font-medium text-slate-800">{rec.fileName}</span>
+                                </div>
+                              </td>
+                              <td className="px-4 py-3.5 text-slate-500">{rec.date}</td>
+                              <td className="px-4 py-3.5 text-center text-slate-700">{rec.total}</td>
+                              <td className="px-4 py-3.5 text-center font-medium text-emerald-600">{rec.valid}</td>
+                              <td className="px-4 py-3.5 text-center font-medium text-red-500">{rec.invalid}</td>
+                              <td className="px-4 py-3.5 text-center">
+                                <span className={cn(
+                                  "inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold",
+                                  rate >= 80 ? "bg-emerald-100 text-emerald-700" :
+                                  rate >= 50 ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700"
+                                )}>{rate}%</span>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
                   </div>
-                  <button
-                    onClick={() => setActiveTab("upload")}
-                    className="mt-2 inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-indigo-700 hover:shadow-md"
-                  >
-                    <Upload className="h-4 w-4" /> Upload your first list
-                  </button>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-slate-100 bg-slate-50 text-left">
-                        <th className="px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">File</th>
-                        <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Date</th>
-                        <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide text-center">Total</th>
-                        <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide text-center">Valid</th>
-                        <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide text-center">Invalid</th>
-                        <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide text-center">Rate</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {history.map((rec) => {
-                        const rate = rec.total > 0 ? Math.round((rec.valid / rec.total) * 100) : 0;
-                        return (
-                          <tr key={rec.id} className="transition-colors hover:bg-slate-50">
-                            <td className="px-6 py-3.5">
-                              <div className="flex items-center gap-2">
-                                <FileText className="h-4 w-4 shrink-0 text-slate-400" />
-                                <span className="font-medium text-slate-800 truncate max-w-[160px]">{rec.fileName}</span>
-                              </div>
-                            </td>
-                            <td className="px-4 py-3.5 text-slate-500">{rec.date}</td>
-                            <td className="px-4 py-3.5 text-center text-slate-700">{rec.total}</td>
-                            <td className="px-4 py-3.5 text-center">
-                              <span className="font-medium text-emerald-600">{rec.valid}</span>
-                            </td>
-                            <td className="px-4 py-3.5 text-center">
-                              <span className="font-medium text-red-500">{rec.invalid}</span>
-                            </td>
-                            <td className="px-4 py-3.5 text-center">
-                              <span className={cn(
-                                "inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold",
-                                rate >= 80 ? "bg-emerald-100 text-emerald-700" :
-                                rate >= 50 ? "bg-amber-100 text-amber-700" :
-                                "bg-red-100 text-red-700"
-                              )}>
-                                {rate}%
-                              </span>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           )}
         </div>
