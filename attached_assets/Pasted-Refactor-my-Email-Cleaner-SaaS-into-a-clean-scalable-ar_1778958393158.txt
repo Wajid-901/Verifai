@@ -1,0 +1,206 @@
+Refactor my Email Cleaner SaaS into a clean scalable architecture before adding more features.
+
+IMPORTANT:
+We are migrating toward:
+
+- Supabase
+- Supabase Auth
+- Next.js App Router
+- Tailwind CSS
+- TypeScript
+
+Current problems that MUST be fixed:
+- duplicated upload logic
+- duplicated validation logic
+- duplicated schema files
+- huge monolithic page files
+- unused Express api-server
+- hardcoded free plan
+- shared utility duplication
+
+TASKS:
+
+==================================================
+1. REMOVE DEAD ARCHITECTURE
+==================================================
+
+Remove:
+- unused Express api-server
+- unused database duplicates
+- unused utility duplicates
+
+Keep only one clean architecture.
+
+==================================================
+2. CREATE CLEAN FOLDER STRUCTURE
+==================================================
+
+Refactor project into:
+
+/app
+/components
+/components/dashboard
+/components/upload
+/components/layout
+/lib
+/lib/supabase
+/lib/utils
+/hooks
+/types
+
+==================================================
+3. EXTRACT SHARED COMPONENTS
+==================================================
+
+Create reusable components:
+
+Navbar
+Sidebar
+UploadWidget
+ResultsCards
+ResultsTable
+PricingCard
+StatsCard
+Loader
+EmptyState
+
+IMPORTANT:
+Landing page and dashboard must share UploadWidget component.
+
+==================================================
+4. EXTRACT SHARED UTILITIES
+==================================================
+
+Move into /lib/utils:
+
+extractEmails()
+downloadTxt()
+cn()
+formatDate()
+
+Remove duplicated logic everywhere.
+
+==================================================
+5. SPLIT LARGE PAGES
+==================================================
+
+Break down:
+- app/page.tsx
+- app/dashboard/page.tsx
+
+into small reusable components.
+
+No page file should exceed 200 lines.
+
+==================================================
+6. SETUP SUPABASE
+==================================================
+
+Install Supabase and configure:
+
+/lib/supabase/client.ts
+/lib/supabase/server.ts
+
+Use environment variables:
+
+NEXT_PUBLIC_SUPABASE_URL
+NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+==================================================
+7. ADD SUPABASE AUTH
+==================================================
+
+Replace Clerk with Supabase Auth.
+
+Requirements:
+- login
+- signup
+- logout
+- protected dashboard routes
+- persistent sessions
+
+==================================================
+8. CREATE SUPABASE DATABASE STRUCTURE
+==================================================
+
+Create tables:
+
+profiles
+uploads
+subscriptions
+usage_stats
+
+Add:
+- indexes
+- foreign keys
+- Row Level Security (RLS)
+
+==================================================
+9. IMPROVE VALIDATION ARCHITECTURE
+==================================================
+
+Prepare validation engine for future scaling.
+
+Create:
+
+/lib/validation
+
+Split:
+- regex validation
+- duplicate detection
+- risky email detection
+- domain validation
+
+Keep architecture modular.
+
+==================================================
+10. ADD SERVER-SIDE LIMIT ENFORCEMENT
+==================================================
+
+Free users:
+- max 100 emails/upload
+
+Enforce limits SERVER-SIDE.
+
+Do NOT rely on frontend checks.
+
+==================================================
+11. MOBILE RESPONSIVENESS
+==================================================
+
+Fix dashboard mobile UX:
+- collapsible sidebar
+- responsive tables
+- responsive upload UI
+
+==================================================
+12. KEEP CURRENT UI DESIGN
+==================================================
+
+Do NOT redesign the app.
+
+Keep:
+- existing SaaS aesthetic
+- gradients
+- cards
+- animations
+- premium feel
+
+==================================================
+13. FINAL OUTPUT
+==================================================
+
+After refactor:
+- explain new architecture
+- explain all folders
+- explain auth flow
+- explain validation flow
+- explain database flow
+- explain upload flow
+
+IMPORTANT:
+Focus heavily on:
+- maintainability
+- scalability
+- clean architecture
+- production readiness

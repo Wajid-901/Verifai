@@ -1,37 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
-import { clerkClient } from "@clerk/nextjs/server";
-import { db } from "@/lib/db";
-import { emailUploadsTable } from "@/lib/schema";
-import { eq, desc } from "drizzle-orm";
+import { createClient } from "@/lib/supabase/server";
 
-async function getUserId(req: NextRequest): Promise<string | null> {
-  const authHeader = req.headers.get("Authorization");
-  const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
-  if (!token) return null;
+export async function GET() {
   try {
-    const client = await clerkClient();
-    const payload = await client.verifyToken(token);
-    return payload.sub;
-  } catch {
-    return null;
-  }
-}
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
 
-export async function GET(req: NextRequest) {
-  try {
-    const userId = await getUserId(req);
-    if (!userId) {
+    if (authError || !user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const uploads = await db
-      .select()
-      .from(emailUploadsTable)
-      .where(eq(emailUploadsTable.userId, userId))
-      .orderBy(desc(emailUploadsTable.createdAt))
+    const { data, error } = await supabase
+      .from("uploads")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
       .limit(50);
 
-    return NextResponse.json(uploads);
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json(data ?? []);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     return NextResponse.json({ error: message }, { status: 500 });
@@ -40,30 +30,45 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const userId = await getUserId(req);
-    if (!userId) {
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const body = await req.json() as {
-      fileName: string;
-      totalEmails: number;
-      validCount: number;
-      invalidCount: number;
+      file_name: string;
+      total_emails: number;
+      valid_count: number;
+      invalid_count: number;
     };
 
-    const { fileName, totalEmails, validCount, invalidCount } = body;
+    const { file_name, total_emails, valid_count, invalid_count } = body;
 
-    if (!fileName || totalEmails == null || validCount == null || invalidCount == null) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    if (
+      !file_name ||
+      total_emails == null ||
+      valid_count == null ||
+      invalid_count == null
+    ) {
+      return NextResponse.json(
+        { error: "Missing required fields" },
+        { status: 400 }
+      );
     }
 
-    const [record] = await db
-      .insert(emailUploadsTable)
-      .values({ userId, fileName, totalEmails, validCount, invalidCount })
-      .returning();
+    const { data, error } = await supabase
+      .from("uploads")
+      .insert({ user_id: user.id, file_name, total_emails, valid_count, invalid_count })
+      .select()
+      .single();
 
-    return NextResponse.json(record, { status: 201 });
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json(data, { status: 201 });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     return NextResponse.json({ error: message }, { status: 500 });
