@@ -2,14 +2,8 @@
 
 import { useState, useRef, useCallback } from "react";
 import {
-  Upload,
-  FileText,
-  Loader2,
-  AlertCircle,
-  PartyPopper,
-  RefreshCw,
-  ArrowRight,
-  XCircle,
+  Upload, FileText, Loader2, AlertCircle, PartyPopper,
+  RefreshCw, ArrowRight, XCircle, Shield,
 } from "lucide-react";
 import Link from "next/link";
 import { cn, extractEmails } from "@/lib/utils";
@@ -39,59 +33,62 @@ export default function UploadWidget({
   const [result, setResult] = useState<ValidationResult | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [loadingDot, setLoadingDot] = useState(0);
+  const [loadingStage, setLoadingStage] = useState(0);
 
   const fileRef = useRef<HTMLInputElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
   const dotTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const stageTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const LOADING_STAGES = [
+    "Checking syntax & duplicates",
+    "Detecting disposable providers",
+    "Verifying MX records",
+    "Scoring & finalising",
+  ];
 
   const startDots = () => {
-    dotTimerRef.current = setInterval(
-      () => setLoadingDot((d) => (d + 1) % 4),
-      400
-    );
+    dotTimerRef.current = setInterval(() => setLoadingDot((d) => (d + 1) % 4), 400);
+    stageTimerRef.current = setInterval(() => setLoadingStage((s) => Math.min(s + 1, LOADING_STAGES.length - 1)), 1800);
   };
   const stopDots = () => {
-    if (dotTimerRef.current) {
-      clearInterval(dotTimerRef.current);
-      dotTimerRef.current = null;
-    }
+    if (dotTimerRef.current) { clearInterval(dotTimerRef.current); dotTimerRef.current = null; }
+    if (stageTimerRef.current) { clearInterval(stageTimerRef.current); stageTimerRef.current = null; }
+    setLoadingStage(0);
   };
 
   const dots = ".".repeat(loadingDot + 1).padEnd(3, "\u00a0");
 
-  const processFile = useCallback(
-    (file: File) => {
-      const ext = file.name.split(".").pop()?.toLowerCase();
-      if (ext !== "csv" && ext !== "txt") {
-        setErrorMsg("Invalid file type. Please upload a .csv or .txt file.");
+  const processFile = useCallback((file: File) => {
+    const ext = file.name.split(".").pop()?.toLowerCase();
+    if (ext !== "csv" && ext !== "txt") {
+      setErrorMsg("Invalid file type. Please upload a .csv or .txt file.");
+      setState("error");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const content = e.target?.result as string;
+      const extracted = extractEmails(content);
+      const limit = plan === "pro" ? Infinity : FREE_LIMIT;
+      if (extracted.length > limit) {
+        setErrorMsg(
+          isAuthenticated
+            ? `Free plan is limited to ${FREE_LIMIT} emails per upload. Your file has ${extracted.length}. Upgrade to Pro for unlimited.`
+            : `Free trial is limited to ${FREE_LIMIT} emails. Your file has ${extracted.length}. Sign up to get started, or upgrade to Pro.`
+        );
         setState("error");
         return;
       }
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const content = e.target?.result as string;
-        const extracted = extractEmails(content);
-        const limit = plan === "pro" ? Infinity : FREE_LIMIT;
-        if (extracted.length > limit) {
-          setErrorMsg(
-            isAuthenticated
-              ? `Free plan is limited to ${FREE_LIMIT} emails per upload. Your file has ${extracted.length}. Upgrade to Pro for unlimited.`
-              : `Free trial is limited to ${FREE_LIMIT} emails. Your file has ${extracted.length}. Sign up to get started, or upgrade to Pro for unlimited.`
-          );
-          setState("error");
-          return;
-        }
-        setFileName(file.name);
-        setEmails(extracted);
-        setEmailCount(extracted.length);
-        setResult(null);
-        setErrorMsg(null);
-        setState("file_loaded");
-      };
-      reader.readAsText(file);
-    },
-    [plan, isAuthenticated]
-  );
+      setFileName(file.name);
+      setEmails(extracted);
+      setEmailCount(extracted.length);
+      setResult(null);
+      setErrorMsg(null);
+      setState("file_loaded");
+    };
+    reader.readAsText(file);
+  }, [plan, isAuthenticated]);
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -112,19 +109,19 @@ export default function UploadWidget({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ emails, plan }),
       });
-      if (!res.ok) throw new Error("Server error");
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({})) as { error?: string };
+        throw new Error(err.error ?? "Server error");
+      }
       const data = (await res.json()) as ValidationResult;
       stopDots();
       setResult(data);
       setState("results");
       if (onResultSaved) onResultSaved(data, fileName ?? "upload.txt");
-      setTimeout(
-        () => resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }),
-        100
-      );
-    } catch {
+      setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
+    } catch (err) {
       stopDots();
-      setErrorMsg("Something went wrong. Please try again.");
+      setErrorMsg(err instanceof Error ? err.message : "Something went wrong. Please try again.");
       setState("error");
     }
   };
@@ -141,12 +138,8 @@ export default function UploadWidget({
 
   return (
     <div className={cn("space-y-5", compact && "space-y-4")}>
-      <div
-        className={cn(
-          "rounded-2xl border border-slate-200/80 bg-white shadow-xl shadow-slate-200/50",
-          compact ? "p-6" : "p-8"
-        )}
-      >
+      <div className={cn("rounded-2xl border border-slate-200/80 bg-white shadow-xl shadow-slate-200/50", compact ? "p-6" : "p-8")}>
+
         {/* Card header */}
         {!compact && (
           <div className="mb-6 flex items-center justify-between">
@@ -154,32 +147,24 @@ export default function UploadWidget({
               <h2 className="text-lg font-bold text-slate-900">Try it free</h2>
               <p className="mt-0.5 text-sm text-slate-500">
                 {state === "results" && result
-                  ? `${result.total} emails processed`
+                  ? `${result.stats.total.toLocaleString()} emails processed`
                   : `Upload up to ${FREE_LIMIT} emails — no sign-up required`}
               </p>
             </div>
             {state === "results" ? (
-              <button
-                onClick={handleReset}
-                className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition-all hover:border-slate-300 hover:bg-slate-50"
-              >
+              <button onClick={handleReset} className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition-all hover:border-slate-300 hover:bg-slate-50">
                 <RefreshCw className="h-3 w-3" /> New upload
               </button>
             ) : (
-              <span className="rounded-lg bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
-                Free
-              </span>
+              <span className="rounded-lg bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">Free</span>
             )}
           </div>
         )}
 
         {compact && state === "results" && (
           <div className="mb-4 flex items-center justify-between">
-            <p className="text-sm text-slate-500">{result?.total} emails processed</p>
-            <button
-              onClick={handleReset}
-              className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition-all hover:border-slate-300 hover:bg-slate-50"
-            >
+            <p className="text-sm text-slate-500">{result?.stats.total.toLocaleString()} emails processed</p>
+            <button onClick={handleReset} className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition-all hover:border-slate-300 hover:bg-slate-50">
               <RefreshCw className="h-3 w-3" /> New upload
             </button>
           </div>
@@ -195,18 +180,12 @@ export default function UploadWidget({
               <p className="text-sm font-medium text-red-800">Upload failed</p>
               <p className="mt-0.5 text-sm text-red-600">{errorMsg}</p>
               {errorMsg.includes("Sign up") && (
-                <Link
-                  href="/sign-up"
-                  className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-700"
-                >
+                <Link href="/sign-up" className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-700">
                   Create free account <ArrowRight className="h-3 w-3" />
                 </Link>
               )}
               {errorMsg.includes("Upgrade") && (
-                <Link
-                  href="/pricing"
-                  className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-700"
-                >
+                <Link href="/pricing" className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-700">
                   See Pro plans <ArrowRight className="h-3 w-3" />
                 </Link>
               )}
@@ -229,11 +208,12 @@ export default function UploadWidget({
               </div>
               <div>
                 <p className="text-sm font-semibold text-indigo-900">
-                  Cleaning your emails{dots}
+                  {LOADING_STAGES[loadingStage]}{dots}
                 </p>
-                <p className="text-xs text-indigo-500">
-                  Checking syntax, domains &amp; duplicates
-                </p>
+                <div className="mt-1 flex items-center gap-1.5 text-xs text-indigo-400">
+                  <Shield className="h-3 w-3" />
+                  7-step validation pipeline running
+                </div>
               </div>
             </div>
             <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-indigo-100">
@@ -249,11 +229,9 @@ export default function UploadWidget({
               <PartyPopper className="h-4 w-4 text-emerald-600" />
             </div>
             <div>
-              <p className="text-sm font-semibold text-emerald-900">
-                Your email list is ready!
-              </p>
+              <p className="text-sm font-semibold text-emerald-900">Validation complete!</p>
               <p className="text-xs text-emerald-600">
-                {result.valid.length} clean emails ready to download
+                {result.valid.length.toLocaleString()} valid · {result.risky.length.toLocaleString()} risky · {(result.invalid.length + result.duplicate.length).toLocaleString()} removed
               </p>
             </div>
           </div>
@@ -264,23 +242,17 @@ export default function UploadWidget({
           <button
             type="button"
             onClick={() => state !== "loading" && fileRef.current?.click()}
-            onDragOver={(e) => {
-              e.preventDefault();
-              if (state !== "loading") setIsDragging(true);
-            }}
+            onDragOver={(e) => { e.preventDefault(); if (state !== "loading") setIsDragging(true); }}
             onDragLeave={() => setIsDragging(false)}
             onDrop={handleDrop}
             disabled={state === "loading"}
             className={cn(
               "group flex w-full cursor-pointer flex-col items-center gap-4 rounded-xl border-2 border-dashed px-6 py-10 transition-all duration-200",
               state === "loading" && "cursor-wait opacity-60",
-              isDragging
-                ? "scale-[1.01] border-indigo-400 bg-indigo-50"
-                : state === "file_loaded"
-                ? "border-emerald-300 bg-emerald-50"
-                : state === "error"
-                ? "border-red-200 bg-red-50/30"
-                : "border-slate-200 bg-slate-50 hover:border-indigo-300 hover:bg-indigo-50/50"
+              isDragging ? "scale-[1.01] border-indigo-400 bg-indigo-50" :
+              state === "file_loaded" ? "border-emerald-300 bg-emerald-50" :
+              state === "error" ? "border-red-200 bg-red-50/30" :
+              "border-slate-200 bg-slate-50 hover:border-indigo-300 hover:bg-indigo-50/50"
             )}
           >
             {(state === "file_loaded" || state === "loading") && fileName ? (
@@ -290,12 +262,8 @@ export default function UploadWidget({
                 </div>
                 <div className="text-center">
                   <p className="font-semibold text-emerald-700">{fileName}</p>
-                  <p className="mt-1 text-sm text-slate-500">
-                    {emailCount} emails detected
-                  </p>
-                  {state !== "loading" && (
-                    <p className="mt-1 text-xs text-slate-400">Click to replace</p>
-                  )}
+                  <p className="mt-1 text-sm text-slate-500">{emailCount} emails detected</p>
+                  {state !== "loading" && <p className="mt-1 text-xs text-slate-400">Click to replace</p>}
                 </div>
               </>
             ) : (
@@ -305,17 +273,13 @@ export default function UploadWidget({
                 </div>
                 <div className="text-center">
                   <p className="font-semibold text-slate-800">
-                    {state === "error"
-                      ? "Try another file"
-                      : "Upload a file to get started"}
+                    {state === "error" ? "Try another file" : "Upload a file to get started"}
                   </p>
                   <p className="mt-1 text-sm text-slate-500">
-                    Drop here or{" "}
-                    <span className="font-medium text-indigo-600">browse to upload</span>
+                    Drop here or <span className="font-medium text-indigo-600">browse to upload</span>
                   </p>
                   <p className="mt-2 text-xs text-slate-400">
-                    .csv or .txt — up to{" "}
-                    {plan === "pro" ? "unlimited" : `${FREE_LIMIT}`} emails
+                    .csv or .txt — up to {plan === "pro" ? "unlimited" : `${FREE_LIMIT}`} emails
                   </p>
                 </div>
               </>
@@ -324,22 +288,14 @@ export default function UploadWidget({
         )}
 
         <input
-          ref={fileRef}
-          type="file"
-          accept=".csv,.txt"
-          className="hidden"
-          onChange={(e) => {
-            const f = e.target.files?.[0];
-            if (f) processFile(f);
-          }}
+          ref={fileRef} type="file" accept=".csv,.txt" className="hidden"
+          onChange={(e) => { const f = e.target.files?.[0]; if (f) processFile(f); }}
         />
 
         {/* Validate button */}
         {(state === "file_loaded" || state === "loading") && (
           <button
-            type="button"
-            onClick={handleValidate}
-            disabled={state === "loading"}
+            type="button" onClick={handleValidate} disabled={state === "loading"}
             className={cn(
               "mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl px-6 py-3.5 text-base font-semibold text-white shadow-md transition-all duration-200",
               state === "loading"
@@ -347,34 +303,18 @@ export default function UploadWidget({
                 : "bg-indigo-600 hover:bg-indigo-700 hover:shadow-lg active:scale-[0.98]"
             )}
           >
-            {state === "loading" ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" /> Cleaning your emails{dots}
-              </>
-            ) : (
-              <>
-                Validate Emails <ArrowRight className="h-4 w-4" />
-              </>
-            )}
+            {state === "loading"
+              ? <><Loader2 className="h-4 w-4 animate-spin" /> Running 7-step validation{dots}</>
+              : <><Shield className="h-4 w-4" /> Validate Emails <ArrowRight className="h-4 w-4" /></>}
           </button>
         )}
 
         {!compact && (
           <p className="mt-4 text-center text-xs text-slate-400">
             Need more?{" "}
-            <Link
-              href="/sign-up"
-              className="font-medium text-indigo-600 hover:text-indigo-700"
-            >
-              Create a free account
-            </Link>{" "}
+            <Link href="/sign-up" className="font-medium text-indigo-600 hover:text-indigo-700">Create a free account</Link>{" "}
             or{" "}
-            <a
-              href="#pricing"
-              className="font-medium text-indigo-600 hover:text-indigo-700"
-            >
-              see Pro plans
-            </a>
+            <a href="#pricing" className="font-medium text-indigo-600 hover:text-indigo-700">see Pro plans</a>
           </p>
         )}
       </div>

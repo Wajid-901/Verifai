@@ -21,40 +21,30 @@ CREATE TABLE IF NOT EXISTS public.uploads (
   file_name     text NOT NULL,
   total_emails  integer NOT NULL CHECK (total_emails >= 0),
   valid_count   integer NOT NULL CHECK (valid_count >= 0),
+  risky_count   integer NOT NULL DEFAULT 0 CHECK (risky_count >= 0),
   invalid_count integer NOT NULL CHECK (invalid_count >= 0),
   created_at    timestamptz NOT NULL DEFAULT now()
 );
 
 -- 3. Subscriptions
 CREATE TABLE IF NOT EXISTS public.subscriptions (
-  id                   bigserial PRIMARY KEY,
-  user_id              uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
-  stripe_customer_id   text,
+  id                     bigserial PRIMARY KEY,
+  user_id                uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  stripe_customer_id     text,
   stripe_subscription_id text,
-  status               text NOT NULL DEFAULT 'inactive',
-  plan                 text NOT NULL DEFAULT 'free' CHECK (plan IN ('free', 'pro')),
-  current_period_end   timestamptz,
-  created_at           timestamptz NOT NULL DEFAULT now(),
-  updated_at           timestamptz NOT NULL DEFAULT now()
-);
-
--- 4. Usage Stats (optional — for analytics)
-CREATE TABLE IF NOT EXISTS public.usage_stats (
-  id           bigserial PRIMARY KEY,
-  user_id      uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
-  date         date NOT NULL DEFAULT CURRENT_DATE,
-  emails_processed integer NOT NULL DEFAULT 0,
-  uploads_count    integer NOT NULL DEFAULT 0,
-  UNIQUE (user_id, date)
+  status                 text NOT NULL DEFAULT 'inactive',
+  plan                   text NOT NULL DEFAULT 'free' CHECK (plan IN ('free', 'pro')),
+  current_period_end     timestamptz,
+  created_at             timestamptz NOT NULL DEFAULT now(),
+  updated_at             timestamptz NOT NULL DEFAULT now()
 );
 
 -- ============================================================
 -- INDEXES
 -- ============================================================
-CREATE INDEX IF NOT EXISTS idx_uploads_user_id     ON public.uploads(user_id);
-CREATE INDEX IF NOT EXISTS idx_uploads_created_at  ON public.uploads(created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_subscriptions_user  ON public.subscriptions(user_id);
-CREATE INDEX IF NOT EXISTS idx_usage_stats_user    ON public.usage_stats(user_id, date);
+CREATE INDEX IF NOT EXISTS idx_uploads_user_id    ON public.uploads(user_id);
+CREATE INDEX IF NOT EXISTS idx_uploads_created_at ON public.uploads(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_subscriptions_user ON public.subscriptions(user_id);
 
 -- ============================================================
 -- ROW LEVEL SECURITY
@@ -62,7 +52,6 @@ CREATE INDEX IF NOT EXISTS idx_usage_stats_user    ON public.usage_stats(user_id
 ALTER TABLE public.profiles      ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.uploads       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.subscriptions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.usage_stats   ENABLE ROW LEVEL SECURITY;
 
 -- Profiles policies
 CREATE POLICY "Users can view own profile"
@@ -81,12 +70,6 @@ CREATE POLICY "Users can delete own uploads"
 -- Subscriptions policies
 CREATE POLICY "Users can view own subscription"
   ON public.subscriptions FOR SELECT USING (auth.uid() = user_id);
-
--- Usage stats policies
-CREATE POLICY "Users can view own usage"
-  ON public.usage_stats FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Users can upsert own usage"
-  ON public.usage_stats FOR ALL USING (auth.uid() = user_id);
 
 -- ============================================================
 -- TRIGGER: Auto-create profile on signup

@@ -11,15 +11,9 @@ export function useUploadHistory() {
     try {
       setLoading(true);
       const res = await fetch("/api/history");
-      if (res.ok) {
-        const data = (await res.json()) as UploadRecord[];
-        setHistory(data);
-      }
-    } catch {
-      // silently ignore
-    } finally {
-      setLoading(false);
-    }
+      if (res.ok) setHistory((await res.json()) as UploadRecord[]);
+    } catch { /* silently ignore */ }
+    finally { setLoading(false); }
   }, []);
 
   const saveUpload = useCallback(
@@ -30,15 +24,14 @@ export function useUploadHistory() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             file_name: fileName,
-            total_emails: result.total,
-            valid_count: result.valid.length,
-            invalid_count: result.invalid.length,
+            total_emails: result.stats.total,
+            valid_count: result.stats.valid,
+            risky_count: result.stats.risky,
+            invalid_count: result.stats.invalid + result.stats.duplicate,
           }),
         });
         await fetchHistory();
-      } catch {
-        // silently ignore — result already shown to user
-      }
+      } catch { /* silently ignore — result already shown */ }
     },
     [fetchHistory]
   );
