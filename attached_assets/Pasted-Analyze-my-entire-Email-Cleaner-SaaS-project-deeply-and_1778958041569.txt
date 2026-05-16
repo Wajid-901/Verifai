@@ -1,0 +1,307 @@
+Analyze my entire "Email Cleaner" SaaS project deeply and generate COMPLETE technical documentation of the whole application.
+
+I want a full project audit and architecture overview.
+
+Your task is to inspect the ENTIRE codebase and explain EVERYTHING about how the app works.
+
+Generate a detailed report with the following sections:
+
+==================================================
+1. PROJECT OVERVIEW
+==================================================
+
+Explain:
+- What this SaaS app does
+- Main purpose of the app
+- Core features
+- Current project maturity level (MVP, production-ready, etc.)
+- Existing functionality already implemented
+- Missing functionality
+- Current strengths and weaknesses
+
+==================================================
+2. TECH STACK ANALYSIS
+==================================================
+
+List ALL technologies currently used.
+
+Explain:
+- Frontend stack
+- Backend stack
+- Database
+- Authentication
+- State management
+- Styling system
+- File handling
+- API architecture
+- Deployment setup
+- External libraries
+- UI libraries
+- Validation libraries
+- Charts/analytics libraries
+- Any hidden dependencies being used
+
+Also explain WHY each technology is being used.
+
+==================================================
+3. COMPLETE APP FLOW
+==================================================
+
+Explain the COMPLETE application flow step-by-step.
+
+Start from:
+- User opens landing page
+
+Then explain:
+- Authentication flow
+- Dashboard flow
+- File upload flow
+- Email validation flow
+- API request flow
+- Database save flow
+- Analytics flow
+- Billing/subscription flow
+- Download/export flow
+
+Show how data moves through the application.
+
+Explain:
+- frontend → backend flow
+- backend → database flow
+- auth/session flow
+- protected route flow
+
+IMPORTANT:
+Explain this like software architecture documentation.
+
+==================================================
+4. FOLDER STRUCTURE EXPLANATION
+==================================================
+
+Analyze the full project structure and explain:
+
+- What each folder does
+- What each important file does
+- Which files are reusable
+- Which files are tightly coupled
+- Which files should be refactored
+
+Explain whether the current architecture is scalable or messy.
+
+==================================================
+5. DATABASE ANALYSIS
+==================================================
+
+Analyze all Supabase/database implementation.
+
+Explain:
+- Tables
+- Relationships
+- Auth integration
+- User data flow
+- Row Level Security
+- Storage system
+- Database schema quality
+- Potential scaling issues
+
+If database structure is weak:
+- explain what should improve
+
+==================================================
+6. AUTHENTICATION ANALYSIS
+==================================================
+
+Explain:
+- How authentication currently works
+- Session handling
+- Protected routes
+- Middleware
+- Security quality
+- Any vulnerabilities
+
+Explain if auth implementation is production-ready.
+
+==================================================
+7. API ANALYSIS
+==================================================
+
+Analyze all API routes.
+
+Explain:
+- What each API route does
+- Request/response structure
+- Validation handling
+- Error handling
+- Security quality
+- Performance quality
+
+Mention:
+- which APIs are clean
+- which APIs need improvement
+
+==================================================
+8. UI/UX ANALYSIS
+==================================================
+
+Analyze the SaaS UI professionally.
+
+Explain:
+- Design quality
+- Consistency
+- SaaS feel
+- Mobile responsiveness
+- User onboarding quality
+- Dashboard UX
+- Empty states
+- Loading states
+- Error states
+
+Mention:
+- weak UX areas
+- premium UX areas
+
+Give a UI score out of 10.
+
+==================================================
+9. PERFORMANCE ANALYSIS
+==================================================
+
+Analyze:
+- Rendering performance
+- Large file handling
+- API performance
+- Client-side bottlenecks
+- Server-side bottlenecks
+- Database bottlenecks
+
+Mention:
+- unnecessary re-renders
+- slow components
+- heavy client logic
+- scalability concerns
+
+==================================================
+10. SECURITY ANALYSIS
+==================================================
+
+Check for:
+- exposed secrets
+- unsafe API usage
+- auth weaknesses
+- file upload vulnerabilities
+- missing validations
+- rate limiting issues
+- XSS risks
+- insecure storage
+
+Explain all security risks clearly.
+
+==================================================
+11. SCALABILITY ANALYSIS
+==================================================
+
+Explain:
+- whether current architecture can scale
+- what breaks first under heavy traffic
+- what should be optimized first
+- database scaling concerns
+- frontend scaling concerns
+- backend scaling concerns
+
+==================================================
+12. CODE QUALITY ANALYSIS
+==================================================
+
+Analyze:
+- code cleanliness
+- reusability
+- maintainability
+- component architecture
+- TypeScript quality
+- naming conventions
+- separation of concerns
+
+Mention:
+- bad practices
+- technical debt
+- duplicated logic
+
+==================================================
+13. MISSING FEATURES
+==================================================
+
+List:
+- important SaaS features missing
+- important UX missing
+- important business logic missing
+- important production features missing
+
+Prioritize them:
+- High priority
+- Medium priority
+- Low priority
+
+==================================================
+14. PRODUCTION READINESS
+==================================================
+
+Explain:
+- whether the app is ready for real users
+- whether deployment is safe
+- whether payments are safe
+- whether authentication is safe
+
+Give:
+- Production readiness score out of 10
+
+==================================================
+15. NEXT DEVELOPMENT ROADMAP
+==================================================
+
+Generate:
+- exact next steps
+- recommended development order
+- architecture improvements
+- feature priorities
+
+Break roadmap into:
+- Immediate tasks
+- Short-term tasks
+- Long-term tasks
+
+==================================================
+16. VISUAL ARCHITECTURE DIAGRAM
+==================================================
+
+Generate a clear architecture diagram showing:
+
+User
+↓
+Frontend
+↓
+API
+↓
+Supabase
+↓
+Storage/Auth/etc.
+
+Show complete system flow visually.
+
+==================================================
+17. FINAL PROJECT SUMMARY
+==================================================
+
+At the end provide:
+
+- overall SaaS quality score
+- biggest strengths
+- biggest weaknesses
+- biggest technical risks
+- biggest growth opportunities
+
+Be brutally honest and highly technical.
+
+IMPORTANT:
+Do NOT give shallow explanations.
+Analyze the REAL existing codebase deeply.
+Act like a senior SaaS architect reviewing a startup product before launch.
