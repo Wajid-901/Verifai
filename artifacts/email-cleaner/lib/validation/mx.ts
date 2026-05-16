@@ -7,8 +7,9 @@ interface MXCacheEntry {
 }
 
 const MX_CACHE = new Map<string, MXCacheEntry>();
-const CACHE_TTL_MS = 10 * 60 * 1000;
-const MX_TIMEOUT_MS = 5_000;
+const CACHE_TTL_MS  = 10 * 60 * 1000; // 10 min
+const MX_TIMEOUT_MS = 5_000;           // 5 s per lookup
+const BATCH_CONCURRENCY = 20;          // max parallel DNS calls
 
 export interface MXResult {
   hasMX: boolean;
@@ -16,13 +17,21 @@ export interface MXResult {
   reason?: string;
 }
 
+export function getCacheStats() {
+  return { size: MX_CACHE.size };
+}
+
+export function clearMXCache() {
+  MX_CACHE.clear();
+}
+
 export async function checkMX(domain: string): Promise<MXResult> {
   const cached = MX_CACHE.get(domain);
   if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
     return {
-      hasMX: cached.hasMX,
+      hasMX:    cached.hasMX,
       timedOut: cached.timedOut,
-      reason: cached.hasMX ? undefined : "No mail server found",
+      reason:   cached.hasMX ? undefined : "No mail server found",
     };
   }
 
@@ -35,24 +44,38 @@ export async function checkMX(domain: string): Promise<MXResult> {
     ]);
 
     const hasMX = Array.isArray(records) && records.length > 0;
-    const entry: MXCacheEntry = { hasMX, timedOut: false, timestamp: Date.now() };
-    MX_CACHE.set(domain, entry);
+    MX_CACHE.set(domain, { hasMX, timedOut: false, timestamp: Date.now() });
     return { hasMX, timedOut: false, reason: hasMX ? undefined : "No mail server found" };
   } catch (err) {
     const timedOut = err instanceof Error && err.message === "mx_timeout";
-    const entry: MXCacheEntry = { hasMX: true, timedOut, timestamp: Date.now() };
-    MX_CACHE.set(domain, entry);
+    // On timeout or NXDOMAIN-like errors, fail open (assume valid) to avoid false negatives
+    MX_CACHE.set(domain, { hasMX: true, timedOut, timestamp: Date.now() });
     return { hasMX: true, timedOut, reason: undefined };
   }
 }
 
-export async function checkMXBatch(domains: string[]): Promise<Map<string, MXResult>> {
+/**
+ * Batch MX check with bounded concurrency — prevents DNS resolver overload
+ * when processing large lists (thousands of unique domains).
+ */
+export async function checkMXBatch(
+  domains: string[],
+  onBatchDone?: (checked: number, total: number) => void,
+): Promise<Map<string, MXResult>> {
   const results = new Map<string, MXResult>();
-  await Promise.allSettled(
-    domains.map(async (domain) => {
-      const result = await checkMX(domain);
-      results.set(domain, result);
-    })
-  );
+  let checked = 0;
+
+  for (let i = 0; i < domains.length; i += BATCH_CONCURRENCY) {
+    const batch = domains.slice(i, i + BATCH_CONCURRENCY);
+    await Promise.allSettled(
+      batch.map(async (domain) => {
+        const result = await checkMX(domain);
+        results.set(domain, result);
+      })
+    );
+    checked += batch.length;
+    onBatchDone?.(checked, domains.length);
+  }
+
   return results;
 }

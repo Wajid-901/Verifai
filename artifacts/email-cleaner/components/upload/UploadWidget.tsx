@@ -11,6 +11,22 @@ import ResultsCards from "./ResultsCards";
 import type { ValidationResult, UploadState, Plan } from "@/types";
 
 const FREE_LIMIT = 100;
+const POLL_INTERVAL_MS = 600;
+const POLL_TIMEOUT_MS  = 90_000; // 90 s
+
+const STAGE_LABELS = [
+  "Checking syntax & duplicates",
+  "Detecting disposable providers",
+  "Verifying MX records",
+  "Scoring & finalising",
+];
+
+function stageFromProgress(pct: number): number {
+  if (pct < 20)  return 0;
+  if (pct < 40)  return 1;
+  if (pct < 85)  return 2;
+  return 3;
+}
 
 interface UploadWidgetProps {
   plan?: Plan;
@@ -25,40 +41,19 @@ export default function UploadWidget({
   onResultSaved,
   compact = false,
 }: UploadWidgetProps) {
-  const [state, setState] = useState<UploadState>("idle");
+  const [state,      setState]      = useState<UploadState>("idle");
   const [isDragging, setIsDragging] = useState(false);
-  const [fileName, setFileName] = useState<string | null>(null);
+  const [fileName,   setFileName]   = useState<string | null>(null);
   const [emailCount, setEmailCount] = useState(0);
-  const [emails, setEmails] = useState<string[]>([]);
-  const [result, setResult] = useState<ValidationResult | null>(null);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [loadingDot, setLoadingDot] = useState(0);
-  const [loadingStage, setLoadingStage] = useState(0);
+  const [emails,     setEmails]     = useState<string[]>([]);
+  const [result,     setResult]     = useState<ValidationResult | null>(null);
+  const [errorMsg,   setErrorMsg]   = useState<string | null>(null);
+  const [progress,   setProgress]   = useState(0);
 
-  const fileRef = useRef<HTMLInputElement>(null);
+  const fileRef    = useRef<HTMLInputElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
-  const dotTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const stageTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const LOADING_STAGES = [
-    "Checking syntax & duplicates",
-    "Detecting disposable providers",
-    "Verifying MX records",
-    "Scoring & finalising",
-  ];
-
-  const startDots = () => {
-    dotTimerRef.current = setInterval(() => setLoadingDot((d) => (d + 1) % 4), 400);
-    stageTimerRef.current = setInterval(() => setLoadingStage((s) => Math.min(s + 1, LOADING_STAGES.length - 1)), 1800);
-  };
-  const stopDots = () => {
-    if (dotTimerRef.current) { clearInterval(dotTimerRef.current); dotTimerRef.current = null; }
-    if (stageTimerRef.current) { clearInterval(stageTimerRef.current); stageTimerRef.current = null; }
-    setLoadingStage(0);
-  };
-
-  const dots = ".".repeat(loadingDot + 1).padEnd(3, "\u00a0");
-
+  /* ── File processing ─────────────────────────────────────────────── */
   const processFile = useCallback((file: File) => {
     const ext = file.name.split(".").pop()?.toLowerCase();
     if (ext !== "csv" && ext !== "txt") {
@@ -74,8 +69,8 @@ export default function UploadWidget({
       if (extracted.length > limit) {
         setErrorMsg(
           isAuthenticated
-            ? `Free plan is limited to ${FREE_LIMIT} emails per upload. Your file has ${extracted.length}. Upgrade to Pro for unlimited.`
-            : `Free trial is limited to ${FREE_LIMIT} emails. Your file has ${extracted.length}. Sign up to get started, or upgrade to Pro.`
+            ? `Free plan is limited to ${FREE_LIMIT} emails. Your file has ${extracted.length}. Upgrade to Pro for unlimited.`
+            : `Free trial is limited to ${FREE_LIMIT} emails. Your file has ${extracted.length}. Sign up or upgrade to Pro.`
         );
         setState("error");
         return;
@@ -85,6 +80,7 @@ export default function UploadWidget({
       setEmailCount(extracted.length);
       setResult(null);
       setErrorMsg(null);
+      setProgress(0);
       setState("file_loaded");
     };
     reader.readAsText(file);
@@ -97,30 +93,52 @@ export default function UploadWidget({
     if (file) processFile(file);
   };
 
+  /* ── Polling ─────────────────────────────────────────────────────── */
+  const pollJob = useCallback(async (jobId: string): Promise<ValidationResult> => {
+    const deadline = Date.now() + POLL_TIMEOUT_MS;
+    while (Date.now() < deadline) {
+      await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
+      const res = await fetch(`/validate/status/${jobId}`);
+      if (!res.ok) throw new Error("Failed to check validation status");
+      const job = await res.json() as {
+        status: string; progress: number;
+        result?: ValidationResult; error?: string;
+      };
+      setProgress(job.progress);
+      if (job.status === "done" && job.result) return job.result;
+      if (job.status === "error") throw new Error(job.error ?? "Validation failed");
+    }
+    throw new Error("Validation timed out. Please try again.");
+  }, []);
+
+  /* ── Submit ──────────────────────────────────────────────────────── */
   const handleValidate = async () => {
     if (!emails.length) return;
     setState("loading");
     setResult(null);
     setErrorMsg(null);
-    startDots();
+    setProgress(0);
+
     try {
       const res = await fetch("/validate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ emails, plan }),
+        body: JSON.stringify({ emails }),
       });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({})) as { error?: string };
-        throw new Error(err.error ?? "Server error");
+
+      const data = await res.json() as { jobId?: string; error?: string };
+
+      if (!res.ok || !data.jobId) {
+        throw new Error(data.error ?? "Server error");
       }
-      const data = (await res.json()) as ValidationResult;
-      stopDots();
-      setResult(data);
+
+      const validationResult = await pollJob(data.jobId);
+
+      setResult(validationResult);
       setState("results");
-      if (onResultSaved) onResultSaved(data, fileName ?? "upload.txt");
+      if (onResultSaved) onResultSaved(validationResult, fileName ?? "upload.txt");
       setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
     } catch (err) {
-      stopDots();
       setErrorMsg(err instanceof Error ? err.message : "Something went wrong. Please try again.");
       setState("error");
     }
@@ -133,14 +151,21 @@ export default function UploadWidget({
     setEmails([]);
     setResult(null);
     setErrorMsg(null);
+    setProgress(0);
     if (fileRef.current) fileRef.current.value = "";
   };
 
+  const stage = stageFromProgress(progress);
+
+  /* ── Render ──────────────────────────────────────────────────────── */
   return (
     <div className={cn("space-y-5", compact && "space-y-4")}>
-      <div className={cn("rounded-2xl border border-slate-200/80 bg-white shadow-xl shadow-slate-200/50", compact ? "p-6" : "p-8")}>
+      <div className={cn(
+        "rounded-2xl border border-slate-200/80 bg-white shadow-xl shadow-slate-200/50",
+        compact ? "p-6" : "p-8"
+      )}>
 
-        {/* Card header */}
+        {/* Header */}
         {!compact && (
           <div className="mb-6 flex items-center justify-between">
             <div>
@@ -196,7 +221,7 @@ export default function UploadWidget({
           </div>
         )}
 
-        {/* Loading banner */}
+        {/* Loading banner with real progress */}
         {state === "loading" && (
           <div className="mb-5 overflow-hidden rounded-xl border border-indigo-100 bg-gradient-to-r from-indigo-50 to-violet-50 px-5 py-4">
             <div className="flex items-center gap-3">
@@ -206,18 +231,46 @@ export default function UploadWidget({
                   <Loader2 className="h-4 w-4 animate-spin text-indigo-600" />
                 </div>
               </div>
-              <div>
-                <p className="text-sm font-semibold text-indigo-900">
-                  {LOADING_STAGES[loadingStage]}{dots}
-                </p>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-semibold text-indigo-900">
+                    {STAGE_LABELS[stage]}…
+                  </p>
+                  {progress > 0 && (
+                    <span className="text-xs font-semibold tabular-nums text-indigo-400">{progress}%</span>
+                  )}
+                </div>
                 <div className="mt-1 flex items-center gap-1.5 text-xs text-indigo-400">
                   <Shield className="h-3 w-3" />
-                  7-step validation pipeline running
+                  7-step validation pipeline
                 </div>
               </div>
             </div>
+
+            {/* Real progress bar */}
             <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-indigo-100">
-              <div className="h-full animate-[loading_1.5s_ease-in-out_infinite] rounded-full bg-gradient-to-r from-indigo-400 to-violet-500" />
+              {progress > 0 ? (
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-indigo-400 to-violet-500 transition-all duration-300"
+                  style={{ width: `${progress}%` }}
+                />
+              ) : (
+                <div className="h-full animate-[loading_1.5s_ease-in-out_infinite] rounded-full bg-gradient-to-r from-indigo-400 to-violet-500" />
+              )}
+            </div>
+
+            {/* Stage pips */}
+            <div className="mt-3 flex justify-between">
+              {STAGE_LABELS.map((label, i) => (
+                <div key={label} className="flex flex-col items-center gap-1">
+                  <div className={cn(
+                    "h-1.5 w-1.5 rounded-full transition-all duration-300",
+                    i < stage  ? "bg-indigo-500" :
+                    i === stage ? "animate-pulse bg-indigo-400" :
+                                  "bg-indigo-200"
+                  )} />
+                </div>
+              ))}
             </div>
           </div>
         )}
@@ -248,11 +301,11 @@ export default function UploadWidget({
             disabled={state === "loading"}
             className={cn(
               "group flex w-full cursor-pointer flex-col items-center gap-4 rounded-xl border-2 border-dashed px-6 py-10 transition-all duration-200",
-              state === "loading" && "cursor-wait opacity-60",
-              isDragging ? "scale-[1.01] border-indigo-400 bg-indigo-50" :
-              state === "file_loaded" ? "border-emerald-300 bg-emerald-50" :
-              state === "error" ? "border-red-200 bg-red-50/30" :
-              "border-slate-200 bg-slate-50 hover:border-indigo-300 hover:bg-indigo-50/50"
+              state === "loading" && "cursor-wait opacity-50",
+              isDragging             ? "scale-[1.01] border-indigo-400 bg-indigo-50" :
+              state === "file_loaded"? "border-emerald-300 bg-emerald-50" :
+              state === "error"      ? "border-red-200 bg-red-50/30" :
+                                       "border-slate-200 bg-slate-50 hover:border-indigo-300 hover:bg-indigo-50/50"
             )}
           >
             {(state === "file_loaded" || state === "loading") && fileName ? (
@@ -304,8 +357,9 @@ export default function UploadWidget({
             )}
           >
             {state === "loading"
-              ? <><Loader2 className="h-4 w-4 animate-spin" /> Running 7-step validation{dots}</>
-              : <><Shield className="h-4 w-4" /> Validate Emails <ArrowRight className="h-4 w-4" /></>}
+              ? <><Loader2 className="h-4 w-4 animate-spin" /> Validating…</>
+              : <><Shield className="h-4 w-4" /> Validate Emails <ArrowRight className="h-4 w-4" /></>
+            }
           </button>
         )}
 
@@ -313,8 +367,7 @@ export default function UploadWidget({
           <p className="mt-4 text-center text-xs text-slate-400">
             Need more?{" "}
             <Link href="/sign-up" className="font-medium text-indigo-600 hover:text-indigo-700">Create a free account</Link>{" "}
-            or{" "}
-            <a href="#pricing" className="font-medium text-indigo-600 hover:text-indigo-700">see Pro plans</a>
+            or <a href="#pricing" className="font-medium text-indigo-600 hover:text-indigo-700">see Pro plans</a>
           </p>
         )}
       </div>

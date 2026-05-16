@@ -1,0 +1,180 @@
+Upgrade my Email Cleaner SaaS for production-grade security and scalability.
+
+IMPORTANT:
+We now have a real validation engine.
+Next we must protect the platform from abuse and performance issues.
+
+==================================================
+1. ADD RATE LIMITING
+==================================================
+
+Protect:
+/validate
+/api/history
+/auth routes
+
+Requirements:
+
+Anonymous users:
+- max 5 validations per hour
+- max 100 emails/upload
+
+Authenticated free users:
+- max 25 validations/day
+
+Pro users:
+- higher limits
+
+Use:
+- Upstash Redis OR in-memory fallback
+
+Return proper error responses.
+
+==================================================
+2. ADD BOT PROTECTION
+==================================================
+
+Add:
+- basic anti-bot protection
+- suspicious traffic detection
+- validation throttling
+
+Optional:
+- Cloudflare Turnstile
+OR
+- hCaptcha
+
+==================================================
+3. ADD REQUEST SIZE LIMITS
+==================================================
+
+Protect server from huge uploads.
+
+Requirements:
+- max upload size
+- max email count
+- reject oversized payloads
+
+Add safe parsing.
+
+==================================================
+4. CREATE BACKGROUND VALIDATION SYSTEM
+==================================================
+
+Move heavy validation into background processing.
+
+Requirements:
+
+Flow:
+1. upload file
+2. create validation job
+3. process asynchronously
+4. update progress live
+
+Prepare architecture for:
+- queues
+- workers
+- Redis
+
+==================================================
+5. ADD VALIDATION CACHING
+==================================================
+
+Cache:
+- MX lookup results
+- domain checks
+- risky domain detection
+
+Requirements:
+- TTL support
+- avoid repeated DNS requests
+
+==================================================
+6. IMPROVE PERFORMANCE
+==================================================
+
+Optimize:
+- parallel validation
+- chunk processing
+- memory usage
+- large file handling
+
+Prevent UI freezing.
+
+==================================================
+7. ADD SERVER LOGGING
+==================================================
+
+Create structured logging for:
+
+- validation requests
+- errors
+- failed MX lookups
+- auth events
+- suspicious activity
+
+==================================================
+8. ADD ERROR MONITORING
+==================================================
+
+Integrate:
+- Sentry (preferred)
+
+Track:
+- API crashes
+- frontend errors
+- validation failures
+
+==================================================
+9. ADD API SECURITY HEADERS
+==================================================
+
+Add:
+- CSP
+- XSS protection
+- secure headers
+- upload sanitization
+
+==================================================
+10. CREATE SERVER-SIDE PLAN SYSTEM
+==================================================
+
+Move plan enforcement fully server-side.
+
+Requirements:
+- free
+- pro
+
+Validation limits must NEVER rely on frontend logic.
+
+==================================================
+11. PREPARE FOR STRIPE
+==================================================
+
+Create architecture for:
+- subscriptions
+- feature gating
+- usage tracking
+
+But do NOT fully integrate Stripe yet.
+
+==================================================
+12. KEEP UX CLEAN
+==================================================
+
+Maintain:
+- premium SaaS feel
+- smooth UX
+- fast interactions
+
+==================================================
+13. IMPORTANT
+==================================================
+
+Focus on:
+- production readiness
+- scalability
+- abuse prevention
+- infrastructure quality
+
+Do NOT redesign the app visually.

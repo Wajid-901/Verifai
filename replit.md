@@ -32,17 +32,30 @@ See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and pa
   - OAuth callback at `/auth/callback`
   - Dashboard at `/dashboard` (protected by `middleware.ts`)
 - **Database**: Supabase Postgres — schema in `supabase/schema.sql`
-  - Tables: `profiles` (plan, avatar, name), `uploads` (per-user history)
+  - Tables: `profiles` (plan, avatar, name), `uploads` (per-user history), `subscriptions`
   - Run `supabase/schema.sql` in Supabase SQL Editor to initialise
-- **Email validation**: Next.js route handler at `/validate` (server-side, enforces plan limits)
-  - Free plan: 100 emails/upload
-  - Pro plan: 100,000 emails/upload + risky-domain flagging
-  - Engine: `lib/validation/` (regex → duplicates → risky domains)
+- **Email validation**: 7-step async pipeline
+  - `POST /validate` → returns `{ jobId }` immediately (202)
+  - `GET /validate/status/[jobId]` → polls job progress (0–100) + final result
+  - Engine: `lib/validation/` (syntax → dedup → disposable → role-based → domain → MX → scoring)
+  - MX lookups: batched at 20 concurrent, 5s timeout, 10-min module-level cache
 - **History API**: Next.js route handler at `/api/history` (GET + POST, auth-gated)
-- **Plans**: Free (100 emails/upload) — Pro (unlimited, UI ready, Stripe not yet wired)
+- **Plans**: `lib/plans.ts` — centralized config (free/pro/anonymous limits)
+  - Free: 100 emails/upload, 25 validations/day
+  - Pro: 100k emails/upload, 500 validations/day
+- **Rate limiting**: `lib/rate-limit.ts` — in-memory sliding window
+  - Anonymous: 5/hour per IP
+  - Free: 25/day per user ID
+  - Pro: 500/day per user ID
+  - Swap store for Upstash Redis for multi-instance deployments
+- **Background jobs**: `lib/jobs.ts` — in-memory job store, 10-min TTL, 1000 job cap
+  - Architecture ready for Redis/queue backend swap
+- **Logging**: `lib/logger.ts` — structured JSON logs (info/warn/error)
+- **Security headers**: `next.config.ts` — CSP, X-Frame-Options, HSTS, etc.
 - **Stripe**: NOT yet connected.
+  - Architecture types in `lib/stripe/types.ts`
   - `stripe` and `stripe-replit-sync` packages installed at root.
-  - To add Stripe: connect via Replit Integrations tab OR store `STRIPE_SECRET_KEY` as secret,
+  - To add Stripe: store `STRIPE_SECRET_KEY` + `STRIPE_WEBHOOK_SECRET` as secrets,
     then follow the `stripe` skill to wire up `stripeClient.ts`, `webhookHandlers.ts`, routes, and seed script.
   - Pricing UI exists at `/#pricing` — Pro CTA links to `/sign-up` as placeholder.
 - **Routing** (artifact.toml paths): `/`, `/api/history`, `/validate`
@@ -58,5 +71,7 @@ See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and pa
 
 - Supabase not available as a Replit managed integration — user must supply their own project keys
 - Stripe connector ID: `connector:ccfg_stripe_01K611P4YQR0SZM11XFRQJC44Y` (not_setup — user dismissed OAuth flow)
-- Upload history stored in Supabase `uploads` table (previously localStorage)
+- Upload history stored in Supabase `uploads` table
 - `lib/db.ts` and `lib/schema.ts` are stubs — do not use; replaced by Supabase client
+- In-memory rate limiter and job store work correctly on Replit's persistent Node.js process;
+  for multi-instance/serverless deploys, swap for Upstash Redis
