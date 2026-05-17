@@ -1,7 +1,0 @@
-{
-  "framework": "nextjs",
-  "rootDirectory": "artifacts/email-cleaner",
-  "buildCommand": "npm run build",
-  "installCommand": "npm install"
-}
-
