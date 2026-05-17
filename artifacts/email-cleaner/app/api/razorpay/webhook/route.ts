@@ -77,15 +77,26 @@ export async function POST(req: NextRequest) {
         if (event.event === "subscription.charged") {
           const payment = event.payload?.payment?.entity;
           if (payment) {
-            await admin.from("billing_events").insert({
-              user_id:                  userId,
-              event_type:               "subscription.charged",
-              razorpay_payment_id:      payment.id as string,
-              razorpay_subscription_id: sub.id as string,
-              amount:                   payment.amount as number,
-              currency:                 (payment.currency as string) ?? "INR",
-              status:                   "success",
-            });
+            const { data: existingPayment } = await admin
+              .from("billing_events")
+              .select("id")
+              .eq("razorpay_payment_id", payment.id as string)
+              .eq("event_type", "subscription.charged")
+              .maybeSingle();
+
+            if (!existingPayment) {
+              await admin.from("billing_events").insert({
+                user_id:                  userId,
+                event_type:               "subscription.charged",
+                razorpay_payment_id:      payment.id as string,
+                razorpay_subscription_id: sub.id as string,
+                amount:                   payment.amount as number,
+                currency:                 (payment.currency as string) ?? "INR",
+                status:                   "success",
+              });
+            } else {
+              logger.info("Idempotency skip: subscription.charged already processed", { paymentId: payment.id });
+            }
           }
         }
 
@@ -133,15 +144,26 @@ export async function POST(req: NextRequest) {
         if (subId) {
           const userId = await findUserBySubscription(admin, subId);
           if (userId) {
-            await admin.from("billing_events").insert({
-              user_id:                  userId,
-              event_type:               "payment.failed",
-              razorpay_payment_id:      payment.id as string,
-              razorpay_subscription_id: subId,
-              amount:                   payment.amount as number | null,
-              currency:                 (payment.currency as string) ?? "INR",
-              status:                   "failed",
-            });
+            const { data: existingPayment } = await admin
+              .from("billing_events")
+              .select("id")
+              .eq("razorpay_payment_id", payment.id as string)
+              .eq("event_type", "payment.failed")
+              .maybeSingle();
+
+            if (!existingPayment) {
+              await admin.from("billing_events").insert({
+                user_id:                  userId,
+                event_type:               "payment.failed",
+                razorpay_payment_id:      payment.id as string,
+                razorpay_subscription_id: subId,
+                amount:                   payment.amount as number | null,
+                currency:                 (payment.currency as string) ?? "INR",
+                status:                   "failed",
+              });
+            } else {
+              logger.info("Idempotency skip: payment.failed already processed", { paymentId: payment.id });
+            }
           }
         }
         break;
@@ -155,6 +177,7 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     logger.error("Webhook handler error", {
       error: err instanceof Error ? err.message : String(err),
+      stack: err instanceof Error ? err.stack : undefined,
     });
     return NextResponse.json({ error: "Webhook error" }, { status: 500 });
   }

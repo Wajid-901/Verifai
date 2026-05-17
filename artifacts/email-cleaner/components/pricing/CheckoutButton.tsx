@@ -51,7 +51,7 @@ export default function CheckoutButton({ className, children }: CheckoutButtonPr
       const rzp = new window.Razorpay({
         key:             body.keyId,
         subscription_id: body.subscriptionId,
-        name:            "EmailCleaner",
+        name:            "Verifai",
         description:     "Pro Plan — 25,000 emails/month",
         theme:           { color: "#4f46e5" },
         handler: async (response: {

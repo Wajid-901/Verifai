@@ -1,26 +1,4 @@
-/**
- * In-memory sliding-window rate limiter.
- * Works correctly on Replit's persistent Node.js process.
- * For multi-instance/serverless deployments, swap the store for Redis (Upstash).
- */
-
-interface WindowEntry {
-  count: number;
-  resetAt: number;
-}
-
-const store = new Map<string, WindowEntry>();
-
-// Evict expired keys periodically to prevent unbounded growth
-let lastEvict = Date.now();
-function evictExpired() {
-  if (Date.now() - lastEvict < 60_000) return;
-  lastEvict = Date.now();
-  const now = Date.now();
-  for (const [key, entry] of store) {
-    if (entry.resetAt <= now) store.delete(key);
-  }
-}
+import { redis } from "./redis";
 
 export interface RateLimitConfig {
   maxRequests: number;
@@ -33,26 +11,22 @@ export interface RateLimitResult {
   retryAfter?: number;
 }
 
-export function checkRateLimit(key: string, config: RateLimitConfig): RateLimitResult {
-  evictExpired();
-  const now = Date.now();
-  const entry = store.get(key);
+export async function checkRateLimit(key: string, config: RateLimitConfig): Promise<RateLimitResult> {
+  const currentCount = await redis.incr(key);
 
-  if (!entry || entry.resetAt <= now) {
-    store.set(key, { count: 1, resetAt: now + config.windowMs });
-    return { allowed: true, remaining: config.maxRequests - 1 };
+  if (currentCount === 1) {
+    await redis.expire(key, Math.ceil(config.windowMs / 1000));
   }
 
-  if (entry.count >= config.maxRequests) {
+  if (currentCount > config.maxRequests) {
     return {
       allowed: false,
       remaining: 0,
-      retryAfter: Math.ceil((entry.resetAt - now) / 1000),
+      retryAfter: Math.ceil(config.windowMs / 1000),
     };
   }
 
-  entry.count += 1;
-  return { allowed: true, remaining: config.maxRequests - entry.count };
+  return { allowed: true, remaining: config.maxRequests - currentCount };
 }
 
 export function getClientIP(req: Request): string {

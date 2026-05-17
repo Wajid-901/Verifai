@@ -12,7 +12,10 @@
   "dependencies": {
     "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.105.4",
+    "@upstash/redis": "^1.38.0",
     "clsx": "catalog:",
+    "lightningcss": "^1.32.0",
+    "lightningcss-win32-x64-msvc": "^1.32.0",
     "lucide-react": "catalog:",
     "next": "^15.3.2",
     "razorpay": "^2.9.6",

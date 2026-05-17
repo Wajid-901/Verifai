@@ -7,7 +7,7 @@ import {
   ChevronDown, ChevronUp, CheckCircle2, AlertTriangle,
   XCircle, Copy as CopyIcon,
 } from "lucide-react";
-import { cn, downloadTxt, getValidRate } from "@/lib/utils";
+import { cn, downloadTxt, downloadCsv, getValidRate } from "@/lib/utils";
 import type { ValidationResult, EmailResult, EmailStatus } from "@/types";
 
 interface ResultsCardsProps {
@@ -140,12 +140,23 @@ export default function ResultsCards({ result, isAuthenticated = false }: Result
       {/* Actions */}
       <div className="flex flex-wrap gap-3">
         {result.valid.length > 0 && (
-          <button
-            onClick={() => downloadTxt("clean_emails.txt", result.valid.join("\n"))}
-            className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 py-3 text-sm font-semibold text-white shadow-md transition-all hover:-translate-y-0.5 hover:bg-indigo-700 hover:shadow-lg"
-          >
-            <Download className="h-4 w-4" /> Download valid ({result.valid.length.toLocaleString()})
-          </button>
+          <div className="flex flex-1 gap-2">
+            <button
+              onClick={() => {
+                const csvContent = "Email\n" + result.valid.map(e => `"${e}"`).join("\n");
+                downloadCsv("clean_emails.csv", csvContent);
+              }}
+              className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white shadow-md transition-all hover:-translate-y-0.5 hover:bg-indigo-700 hover:shadow-lg"
+            >
+              <Download className="h-4 w-4" /> CSV ({result.valid.length.toLocaleString()})
+            </button>
+            <button
+              onClick={() => downloadTxt("clean_emails.txt", result.valid.join("\n"))}
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm font-semibold text-indigo-700 transition-all hover:bg-indigo-100"
+            >
+              TXT
+            </button>
+          </div>
         )}
         {result.risky.length > 0 && (
           <button

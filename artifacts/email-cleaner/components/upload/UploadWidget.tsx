@@ -52,6 +52,13 @@ export default function UploadWidget({
 
   const fileRef    = useRef<HTMLInputElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
+  const abortRef   = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort();
+    };
+  }, []);
 
   /* ── File processing ─────────────────────────────────────────────── */
   const processFile = useCallback((file: File) => {
@@ -61,10 +68,21 @@ export default function UploadWidget({
       setState("error");
       return;
     }
+    if (file.size === 0) {
+      setErrorMsg("The file is empty. Please upload a valid list.");
+      setState("error");
+      return;
+    }
     const reader = new FileReader();
     reader.onload = (e) => {
       const content = e.target?.result as string;
       const extracted = extractEmails(content);
+      if (extracted.length === 0) {
+        setErrorMsg("No valid emails found in the file.");
+        setState("error");
+        return;
+      }
+      
       const limit = plan === "pro" ? Infinity : FREE_LIMIT;
       if (extracted.length > limit) {
         setErrorMsg(
@@ -94,11 +112,15 @@ export default function UploadWidget({
   };
 
   /* ── Polling ─────────────────────────────────────────────────────── */
-  const pollJob = useCallback(async (jobId: string): Promise<ValidationResult> => {
+  const pollJob = useCallback(async (jobId: string, signal: AbortSignal): Promise<ValidationResult> => {
     const deadline = Date.now() + POLL_TIMEOUT_MS;
     while (Date.now() < deadline) {
+      if (signal.aborted) throw new Error("aborted");
+      
       await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
-      const res = await fetch(`/validate/status/${jobId}`);
+      if (signal.aborted) throw new Error("aborted");
+
+      const res = await fetch(`/validate/status/${jobId}`, { signal });
       if (!res.ok) throw new Error("Failed to check validation status");
       const job = await res.json() as {
         status: string; progress: number;
@@ -132,15 +154,19 @@ export default function UploadWidget({
         throw new Error(data.error ?? "Server error");
       }
 
-      const validationResult = await pollJob(data.jobId);
+      abortRef.current = new AbortController();
+      const validationResult = await pollJob(data.jobId, abortRef.current.signal);
 
       setResult(validationResult);
       setState("results");
       if (onResultSaved) onResultSaved(validationResult, fileName ?? "upload.txt");
       setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
     } catch (err) {
+      if (err instanceof Error && err.message === "aborted") return;
       setErrorMsg(err instanceof Error ? err.message : "Something went wrong. Please try again.");
       setState("error");
+    } finally {
+      abortRef.current = null;
     }
   };
 

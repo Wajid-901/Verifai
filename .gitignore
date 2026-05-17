@@ -47,3 +47,16 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+
+# Next.js build output
+.next/
+out/
+
+# Environment variables (sensitive)
+.env
+.env.local
+.env.*.local
+.env.production
+
+# Logs
+*.log

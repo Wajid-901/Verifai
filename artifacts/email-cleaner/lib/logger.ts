@@ -4,6 +4,14 @@ interface LogMeta {
   [key: string]: unknown;
 }
 
+function safeStringify(obj: any) {
+  try {
+    return JSON.stringify(obj);
+  } catch (err) {
+    return JSON.stringify({ error: "Failed to stringify log metadata" });
+  }
+}
+
 function log(level: LogLevel, message: string, meta?: LogMeta) {
   const entry = {
     ts: new Date().toISOString(),
@@ -11,12 +19,15 @@ function log(level: LogLevel, message: string, meta?: LogMeta) {
     msg: message,
     ...meta,
   };
+  
+  const output = safeStringify(entry);
+  
   if (level === "error") {
-    console.error(JSON.stringify(entry));
+    console.error(output);
   } else if (level === "warn") {
-    console.warn(JSON.stringify(entry));
+    console.warn(output);
   } else {
-    console.log(JSON.stringify(entry));
+    console.log(output);
   }
 }
 

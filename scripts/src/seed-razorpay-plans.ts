@@ -1,5 +1,5 @@
 /**
- * Seed Razorpay Plan for Email Cleaner Pro
+ * Seed Razorpay Plan for Verifai Pro
  * Run: pnpm --filter @workspace/scripts run seed-razorpay
  *
  * After running, copy the plan_id from the output and
@@ -20,17 +20,17 @@ if (!keyId || !keySecret) {
 const razorpay = new Razorpay({ key_id: keyId, key_secret: keySecret });
 
 async function main() {
-  console.log("🔍  Checking for existing Email Cleaner Pro plan…\n");
+  console.log("🔍  Checking for existing Verifai Pro plan…\n");
 
   // List existing plans to avoid duplicates
   const { items: existingPlans } = await razorpay.plans.all({ count: 100 }) as {
     items: Array<{ id: string; item?: { name?: string; amount?: number }; interval?: number; period?: string }>;
   };
 
-  const existing = existingPlans.find((p) => p.item?.name === "Email Cleaner Pro");
+  const existing = existingPlans.find((p) => p.item?.name === "Verifai Pro");
 
   if (existing) {
-    console.log("✅  Email Cleaner Pro plan already exists:");
+    console.log("✅  Verifai Pro plan already exists:");
     console.log(`    Plan ID : ${existing.id}`);
     console.log(`    Amount  : ₹${((existing.item?.amount ?? 0) / 100).toFixed(2)} / ${existing.period}`);
     console.log("\n📌  Set this in your Replit secrets:");
@@ -38,19 +38,19 @@ async function main() {
     return;
   }
 
-  console.log("🚀  Creating Email Cleaner Pro plan…");
+  console.log("🚀  Creating Verifai Pro plan…");
 
   const plan = await razorpay.plans.create({
     period:   "monthly",
     interval: 1,
     item: {
-      name:        "Email Cleaner Pro",
+      name:        "Verifai Pro",
       amount:      150000, // ₹1,500.00 in paise (~$18 USD)
       unit_amount: 150000,
       currency:    "INR",
     },
     notes: {
-      product: "email-cleaner",
+      product: "verifai",
       tier:    "pro",
     },
   } as Parameters<typeof razorpay.plans.create>[0]);

@@ -34,8 +34,8 @@ export default async function Home() {
           <div className="mx-auto max-w-6xl">
             <div className="mb-8 flex justify-center">
               <span className="inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 px-4 py-1.5 text-xs font-semibold text-indigo-700 shadow-sm">
-                <Sparkles className="h-3.5 w-3.5" />
-                Trusted by 50,000+ marketers worldwide
+                <ShieldCheck className="h-3.5 w-3.5" />
+                Production-grade email validation
               </span>
             </div>
 
@@ -110,11 +110,11 @@ export default async function Home() {
               <Mail className="h-3.5 w-3.5 text-white" />
             </div>
             <span className="text-base font-bold text-slate-900">
-              Email<span className="text-indigo-600">Cleaner</span>
+              Veri<span className="text-indigo-600">fai</span>
             </span>
           </div>
           <p className="text-sm text-slate-400">
-            © 2026 EmailCleaner, Inc. All rights reserved.
+            © 2026 Verifai, Inc. All rights reserved.
           </p>
           <div className="flex gap-6">
             {["Privacy", "Terms", "Support"].map((item) => (

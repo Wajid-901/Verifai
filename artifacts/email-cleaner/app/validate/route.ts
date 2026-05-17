@@ -24,9 +24,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
   }
 
-  if (!body.emails || !Array.isArray(body.emails)) {
+  if (!body.emails || !Array.isArray(body.emails) || body.emails.length === 0) {
     return NextResponse.json(
-      { error: "Invalid request: expected { emails: string[] }" },
+      { error: "Invalid request: expected non-empty array of emails." },
       { status: 400 }
     );
   }
@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
   const rlCfg = plan === "pro"  ? RATE_LIMITS.pro_validate :
                 plan === "free" ? RATE_LIMITS.free_validate :
                                   RATE_LIMITS.anonymous_validate;
-  const rl = checkRateLimit(rlKey, rlCfg);
+  const rl = await checkRateLimit(rlKey, rlCfg);
 
   if (!rl.allowed) {
     logger.warn("Rate limit exceeded", { ip, userId, plan });
@@ -130,8 +130,8 @@ export async function POST(req: NextRequest) {
 
   // ── Create async job ──────────────────────────────────────────
   const jobId = crypto.randomUUID();
-  createJob(jobId, userId ?? undefined);
-  updateJob(jobId, { status: "processing", progress: 1 });
+  await createJob(jobId, userId ?? undefined);
+  await updateJob(jobId, { status: "processing", progress: 1 });
 
   logger.info("Validation job created", {
     jobId, emailCount: emails.length, plan, ip,
@@ -153,9 +153,9 @@ async function runValidationJob(
     const result = await validateEmails(
       emails,
       { removeDuplicates: true, checkMXRecords: true },
-      (pct) => updateJob(jobId, { progress: pct }),
+      (pct) => { void updateJob(jobId, { progress: pct }); },
     );
-    updateJob(jobId, { status: "done", progress: 100, result });
+    await updateJob(jobId, { status: "done", progress: 100, result });
     logger.info("Validation job complete", { jobId, stats: result.stats });
 
     // ── Update usage tracking (best-effort) ───────────────────
@@ -177,7 +177,7 @@ async function runValidationJob(
     }
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unknown error";
-    updateJob(jobId, { status: "error", error: msg });
+    await updateJob(jobId, { status: "error", error: msg });
     logger.error("Validation job failed", { jobId, error: msg });
   }
 }

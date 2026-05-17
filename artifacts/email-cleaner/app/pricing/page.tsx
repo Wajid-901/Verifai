@@ -9,7 +9,7 @@ const freePlan = {
   name: "Free",
   price: "$0",
   period: "forever",
-  description: "Perfect for individuals trying Email Cleaner for the first time.",
+  description: "Perfect for individuals trying Verifai for the first time.",
   features: [
     { label: "Up to 100 emails per upload",      included: true  },
     { label: "Syntax & duplicate validation",    included: true  },
@@ -89,7 +89,7 @@ export default function PricingPage() {
               <Mail className="h-4 w-4 text-white" />
             </div>
             <span className="text-lg font-bold text-slate-900">
-              Email<span className="text-indigo-600">Cleaner</span>
+              Veri<span className="text-indigo-600">fai</span>
             </span>
           </Link>
           <nav className="hidden items-center gap-8 md:flex">
@@ -286,9 +286,9 @@ export default function PricingPage() {
             <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-600">
               <Mail className="h-3.5 w-3.5 text-white" />
             </div>
-            <span className="text-base font-bold text-slate-900">Email<span className="text-indigo-600">Cleaner</span></span>
+            <span className="text-base font-bold text-slate-900">Veri<span className="text-indigo-600">fai</span></span>
           </div>
-          <p className="text-sm text-slate-400">© 2026 EmailCleaner, Inc. All rights reserved.</p>
+          <p className="text-sm text-slate-400">© 2026 Verifai, Inc. All rights reserved.</p>
           <div className="flex gap-6">
             {["Privacy", "Terms", "Support"].map((item) => (
               <a key={item} href="#" className="text-sm text-slate-500 transition-colors hover:text-slate-900">{item}</a>

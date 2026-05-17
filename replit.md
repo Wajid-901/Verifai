@@ -22,7 +22,7 @@ See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and pa
 
 ## Artifacts
 
-### Email Cleaner (`artifacts/email-cleaner`)
+### Verifai (`artifacts/email-cleaner`)
 - **Kind**: Next.js 15 (App Router) + Tailwind CSS v4
 - **Auth**: Supabase Auth (cookie-based SSR via `@supabase/ssr`)
   - Keys in `artifacts/email-cleaner/.env.local`
@@ -62,10 +62,10 @@ See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and pa
   - `/api/history` and `/validate` are explicitly claimed so they take priority over api-server's `/api`
 
 ### API Server (`artifacts/api-server`)
-- **Kind**: Express 5 (standalone, not used by Email Cleaner after Supabase migration)
+- **Kind**: Express 5 (standalone, not used by Verifai after Supabase migration)
 - **Auth**: Clerk proxy middleware (`@clerk/express`)
 - **Routes**: `/api` prefix
-- **Note**: Email Cleaner no longer depends on this service.
+- **Note**: Verifai no longer depends on this service.
 
 ## Important Notes
 

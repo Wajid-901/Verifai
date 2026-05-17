@@ -1,4 +1,5 @@
 import { promises as dns } from "dns";
+import { logger } from "@/lib/logger";
 
 interface MXCacheEntry {
   hasMX: boolean;
@@ -48,6 +49,11 @@ export async function checkMX(domain: string): Promise<MXResult> {
     return { hasMX, timedOut: false, reason: hasMX ? undefined : "No mail server found" };
   } catch (err) {
     const timedOut = err instanceof Error && err.message === "mx_timeout";
+    
+    if (timedOut) {
+      logger.warn("MX check timed out", { domain, durationMs: MX_TIMEOUT_MS });
+    }
+
     // On timeout or NXDOMAIN-like errors, fail open (assume valid) to avoid false negatives
     MX_CACHE.set(domain, { hasMX: true, timedOut, timestamp: Date.now() });
     return { hasMX: true, timedOut, reason: undefined };

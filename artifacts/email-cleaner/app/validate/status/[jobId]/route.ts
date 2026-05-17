@@ -11,7 +11,7 @@ export async function GET(
     return NextResponse.json({ error: "Missing jobId" }, { status: 400 });
   }
 
-  const job = getJob(jobId);
+  const job = await getJob(jobId);
 
   if (!job) {
     return NextResponse.json({ error: "Job not found or expired" }, { status: 404 });

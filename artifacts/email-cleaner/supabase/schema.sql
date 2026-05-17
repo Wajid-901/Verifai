@@ -1,5 +1,5 @@
 -- ============================================================
--- Email Cleaner — Supabase Schema
+-- Verifai — Supabase Schema
 -- Run this in your Supabase project's SQL Editor
 -- Idempotent: safe to re-run on existing databases
 -- ============================================================
