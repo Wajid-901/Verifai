@@ -7,9 +7,9 @@ import {
   LayoutDashboard,
   Upload,
   History,
-  Sparkles,
-  Zap,
+  CreditCard,
   Crown,
+  Zap,
   LogOut,
   X,
 } from "lucide-react";
@@ -38,7 +38,7 @@ export default function Sidebar({
   open,
   onClose,
 }: SidebarProps) {
-  const router = useRouter();
+  const router   = useRouter();
   const supabase = createClient();
 
   const handleSignOut = async () => {
@@ -49,13 +49,13 @@ export default function Sidebar({
 
   const navItems: { id: DashboardTab; icon: React.ElementType; label: string }[] = [
     { id: "dashboard", icon: LayoutDashboard, label: "Dashboard" },
-    { id: "upload", icon: Upload, label: "Upload" },
-    { id: "history", icon: History, label: "History" },
+    { id: "upload",    icon: Upload,          label: "Upload"    },
+    { id: "history",   icon: History,         label: "History"   },
+    { id: "billing",   icon: CreditCard,      label: "Billing"   },
   ];
 
-  const userInitial =
-    user.full_name?.[0] ?? user.email?.[0]?.toUpperCase() ?? "U";
-  const userName = user.full_name ?? user.email ?? "there";
+  const userInitial = user.full_name?.[0] ?? user.email?.[0]?.toUpperCase() ?? "U";
+  const userName    = user.full_name ?? user.email ?? "there";
 
   const sidebar = (
     <aside className="flex h-full w-64 flex-col border-r border-slate-200 bg-white">
@@ -97,18 +97,13 @@ export default function Sidebar({
                 {historyCount}
               </span>
             )}
+            {id === "billing" && plan === "pro" && (
+              <span className="ml-auto rounded-full bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-700">
+                PRO
+              </span>
+            )}
           </button>
         ))}
-
-        <div className="my-3 border-t border-slate-100" />
-
-        <Link
-          href="/pricing"
-          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-600 transition-all hover:bg-slate-50 hover:text-slate-900"
-        >
-          <Sparkles className="h-4 w-4 shrink-0" />
-          Pricing
-        </Link>
       </nav>
 
       <div className="border-t border-slate-100 px-4 pb-3 pt-4">
@@ -121,13 +116,13 @@ export default function Sidebar({
             <p className="mb-3 text-xs leading-relaxed text-indigo-700">
               Limited to {FREE_LIMIT} emails per upload.
             </p>
-            <Link
-              href="/pricing"
+            <button
+              onClick={() => { onTabChange("billing"); onClose(); }}
               className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-2 text-xs font-semibold text-white transition-all hover:bg-indigo-700 hover:shadow-sm"
             >
               <Crown className="h-3 w-3" />
               Upgrade to Pro
-            </Link>
+            </button>
           </div>
         ) : (
           <div className="rounded-xl border border-amber-100 bg-gradient-to-br from-amber-50 to-orange-50 p-3.5">
@@ -172,21 +167,16 @@ export default function Sidebar({
 
   return (
     <>
-      {/* Desktop: fixed */}
       <div className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:flex lg:w-64">
         {sidebar}
       </div>
-
-      {/* Mobile: drawer */}
       {open && (
         <div className="fixed inset-0 z-40 flex lg:hidden">
           <div
             className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm"
             onClick={onClose}
           />
-          <div className="relative z-50 flex w-64 flex-col">
-            {sidebar}
-          </div>
+          <div className="relative z-50 flex w-64 flex-col">{sidebar}</div>
         </div>
       )}
     </>

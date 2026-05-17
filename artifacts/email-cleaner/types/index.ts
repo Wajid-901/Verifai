@@ -36,9 +36,21 @@ export interface UploadRecord {
   created_at: string;
 }
 
+export interface SubscriptionRecord {
+  id: number;
+  user_id: string;
+  stripe_customer_id: string | null;
+  stripe_subscription_id: string | null;
+  status: string;
+  plan: "free" | "pro";
+  current_period_end: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export type Plan = "free" | "pro";
 export type UploadState = "idle" | "file_loaded" | "loading" | "results" | "error";
-export type DashboardTab = "dashboard" | "upload" | "history";
+export type DashboardTab = "dashboard" | "upload" | "history" | "billing";
 
 export interface UserProfile {
   id: string;

@@ -1,10 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import {
-  Upload, TrendingUp, CheckCircle2, Zap, Crown, ArrowRight, Menu,
-} from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Upload, TrendingUp, CheckCircle2, Zap, Crown, ArrowRight, Menu } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { useUploadHistory } from "@/hooks/useUploadHistory";
@@ -12,6 +10,7 @@ import Sidebar from "@/components/layout/Sidebar";
 import StatsCard from "@/components/dashboard/StatsCard";
 import EmptyState from "@/components/dashboard/EmptyState";
 import HistoryTable from "@/components/dashboard/HistoryTable";
+import BillingTab from "@/components/dashboard/BillingTab";
 import UploadWidget from "@/components/upload/UploadWidget";
 import Loader from "@/components/ui/Loader";
 import type { UserProfile, DashboardTab, Plan } from "@/types";
@@ -19,14 +18,23 @@ import type { UserProfile, DashboardTab, Plan } from "@/types";
 const FREE_LIMIT = 100;
 
 export default function DashboardPage() {
-  const router = useRouter();
-  const [user, setUser] = useState<UserProfile | null>(null);
-  const [isLoaded, setIsLoaded] = useState(false);
-  const [activeTab, setActiveTab] = useState<DashboardTab>("dashboard");
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { history, loading: historyLoading, fetchHistory, saveUpload } = useUploadHistory();
+  const router       = useRouter();
+  const searchParams = useSearchParams();
 
+  const [user,        setUser]        = useState<UserProfile | null>(null);
+  const [isLoaded,    setIsLoaded]    = useState(false);
+  const [activeTab,   setActiveTab]   = useState<DashboardTab>("dashboard");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const { history, loading: historyLoading, fetchHistory, saveUpload } = useUploadHistory();
   const plan: Plan = user?.plan ?? "free";
+
+  // Handle ?billing=success redirect from Stripe
+  useEffect(() => {
+    if (searchParams.get("billing") === "success") {
+      setActiveTab("billing");
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     const supabase = createClient();
@@ -35,11 +43,11 @@ export default function DashboardPage() {
       const { data: profile } = await supabase
         .from("profiles").select("*").eq("id", authUser.id).single();
       setUser({
-        id: authUser.id,
-        email: authUser.email ?? null,
-        full_name: profile?.full_name ?? authUser.user_metadata?.full_name ?? null,
+        id:         authUser.id,
+        email:      authUser.email ?? null,
+        full_name:  profile?.full_name ?? authUser.user_metadata?.full_name ?? null,
         avatar_url: profile?.avatar_url ?? authUser.user_metadata?.avatar_url ?? null,
-        plan: profile?.plan ?? "free",
+        plan:       profile?.plan ?? "free",
         created_at: authUser.created_at,
       });
       setIsLoaded(true);
@@ -52,7 +60,7 @@ export default function DashboardPage() {
 
   const totalCleaned = history.reduce((s, r) => s + r.valid_count, 0);
   const totalInvalid = history.reduce((s, r) => s + r.invalid_count, 0);
-  const overallRate = totalCleaned + totalInvalid > 0
+  const overallRate  = totalCleaned + totalInvalid > 0
     ? Math.round((totalCleaned / (totalCleaned + totalInvalid)) * 100) : 0;
 
   return (
@@ -77,8 +85,10 @@ export default function DashboardPage() {
             <DashboardHome
               user={user} plan={plan} history={history} historyLoading={historyLoading}
               totalCleaned={totalCleaned} totalUploads={history.length}
-              overallRate={overallRate} onUploadClick={() => setActiveTab("upload")}
+              overallRate={overallRate}
+              onUploadClick={() => setActiveTab("upload")}
               onHistoryClick={() => setActiveTab("history")}
+              onBillingClick={() => setActiveTab("billing")}
             />
           )}
           {activeTab === "upload" && (
@@ -86,7 +96,9 @@ export default function DashboardPage() {
               <div>
                 <h1 className="text-2xl font-bold text-slate-900">Upload</h1>
                 <p className="mt-1 text-slate-500">
-                  {plan === "free" ? `Free plan: up to ${FREE_LIMIT} emails per upload` : "Pro plan: unlimited emails"}
+                  {plan === "free"
+                    ? `Free plan: up to ${FREE_LIMIT} emails per upload`
+                    : "Pro plan: unlimited emails per upload"}
                 </p>
               </div>
               <UploadWidget
@@ -107,16 +119,22 @@ export default function DashboardPage() {
               )}
             </div>
           )}
+          {activeTab === "billing" && <BillingTab />}
         </div>
       </main>
     </div>
   );
 }
 
-function DashboardHome({ user, plan, history, historyLoading, totalCleaned, totalUploads, overallRate, onUploadClick, onHistoryClick }: {
-  user: UserProfile; plan: Plan; history: ReturnType<typeof useUploadHistory>["history"];
-  historyLoading: boolean; totalCleaned: number; totalUploads: number;
-  overallRate: number; onUploadClick: () => void; onHistoryClick: () => void;
+function DashboardHome({
+  user, plan, history, historyLoading, totalCleaned, totalUploads,
+  overallRate, onUploadClick, onHistoryClick, onBillingClick,
+}: {
+  user: UserProfile; plan: Plan;
+  history: ReturnType<typeof useUploadHistory>["history"];
+  historyLoading: boolean;
+  totalCleaned: number; totalUploads: number; overallRate: number;
+  onUploadClick: () => void; onHistoryClick: () => void; onBillingClick: () => void;
 }) {
   return (
     <div className="space-y-8">
@@ -125,20 +143,24 @@ function DashboardHome({ user, plan, history, historyLoading, totalCleaned, tota
           Welcome back, {user.full_name?.split(" ")[0] ?? "there"} 👋
         </h1>
         <p className="mt-1 text-slate-500">
-          {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
+          {new Date().toLocaleDateString("en-US", {
+            weekday: "long", month: "long", day: "numeric", year: "numeric",
+          })}
         </p>
       </div>
 
       {historyLoading ? (
         <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-          {[...Array(4)].map((_, i) => <div key={i} className="h-28 animate-pulse rounded-2xl border border-slate-200 bg-slate-100" />)}
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="h-28 animate-pulse rounded-2xl border border-slate-200 bg-slate-100" />
+          ))}
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-          <StatsCard icon={TrendingUp} value={totalCleaned.toLocaleString()} label="Emails cleaned" iconBg="bg-indigo-50" iconColor="text-indigo-600" />
-          <StatsCard icon={Upload} value={String(totalUploads)} label="Total uploads" iconBg="bg-emerald-50" iconColor="text-emerald-600" />
-          <StatsCard icon={CheckCircle2} value={totalUploads > 0 ? `${overallRate}%` : "—"} label="Avg. valid rate" iconBg="bg-teal-50" iconColor="text-teal-600" />
-          <StatsCard icon={Zap} value={plan === "free" ? "100" : "∞"} label="Email limit" iconBg="bg-violet-50" iconColor="text-violet-600" border={plan === "pro" ? "border-amber-200" : "border-slate-200"} />
+          <StatsCard icon={TrendingUp}   value={totalCleaned.toLocaleString()}         label="Emails cleaned"   iconBg="bg-indigo-50"  iconColor="text-indigo-600" />
+          <StatsCard icon={Upload}       value={String(totalUploads)}                  label="Total uploads"    iconBg="bg-emerald-50" iconColor="text-emerald-600" />
+          <StatsCard icon={CheckCircle2} value={totalUploads > 0 ? `${overallRate}%` : "—"} label="Avg. valid rate" iconBg="bg-teal-50"    iconColor="text-teal-600" />
+          <StatsCard icon={Zap}          value={plan === "free" ? "100" : "∞"}         label="Email limit"      iconBg="bg-violet-50"  iconColor="text-violet-600" border={plan === "pro" ? "border-amber-200" : "border-slate-200"} />
         </div>
       )}
 
@@ -160,7 +182,9 @@ function DashboardHome({ user, plan, history, historyLoading, totalCleaned, tota
             </div>
             <p className="font-bold text-slate-900">View History</p>
             <p className="mt-0.5 text-sm text-slate-500">
-              {historyLoading ? "Loading..." : history.length > 0 ? `${history.length} previous upload${history.length !== 1 ? "s" : ""}` : "No uploads yet"}
+              {historyLoading ? "Loading…" : history.length > 0
+                ? `${history.length} previous upload${history.length !== 1 ? "s" : ""}`
+                : "No uploads yet"}
             </p>
           </div>
           <ArrowRight className="h-5 w-5 shrink-0 text-slate-400 transition-transform duration-200 group-hover:translate-x-0.5" />
@@ -170,7 +194,6 @@ function DashboardHome({ user, plan, history, historyLoading, totalCleaned, tota
       {!historyLoading && history.length > 0 && (
         <HistoryTable records={history} limit={5} onViewAll={onHistoryClick} showHeader />
       )}
-
       {!historyLoading && history.length === 0 && (
         <EmptyState onUploadClick={onUploadClick} />
       )}
@@ -185,11 +208,14 @@ function DashboardHome({ user, plan, history, historyLoading, totalCleaned, tota
                 <span className="text-xs font-bold uppercase tracking-wider text-indigo-200">Pro Plan</span>
               </div>
               <h3 className="text-lg font-bold">Unlock unlimited email validation</h3>
-              <p className="mt-1 text-sm text-indigo-200">Process millions of emails, advanced MX checks, priority speed.</p>
+              <p className="mt-1 text-sm text-indigo-200">Process any size list, advanced MX checks, priority speed.</p>
             </div>
-            <Link href="/pricing" className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-indigo-700 shadow-md transition-all hover:-translate-y-0.5 hover:shadow-lg">
-              View pricing <ArrowRight className="h-4 w-4" />
-            </Link>
+            <button
+              onClick={onBillingClick}
+              className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-indigo-700 shadow-md transition-all hover:-translate-y-0.5 hover:shadow-lg"
+            >
+              Upgrade to Pro <ArrowRight className="h-4 w-4" />
+            </button>
           </div>
         </div>
       )}

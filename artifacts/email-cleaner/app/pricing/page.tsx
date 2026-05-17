@@ -1,36 +1,27 @@
 import Link from "next/link";
 import {
-  Check,
-  X,
-  Crown,
-  Mail,
-  Zap,
-  ArrowRight,
-  ShieldCheck,
-  Download,
-  Infinity,
+  Check, X, Crown, Mail, Zap, ArrowRight,
+  ShieldCheck, Download, Infinity,
 } from "lucide-react";
-
-export const dynamic = "force-static";
+import CheckoutButton from "@/components/pricing/CheckoutButton";
 
 const freePlan = {
   name: "Free",
   price: "$0",
   period: "forever",
   description: "Perfect for individuals trying Email Cleaner for the first time.",
-  color: "slate",
   features: [
-    { label: "Up to 100 emails per upload", included: true },
-    { label: "Basic syntax validation", included: true },
-    { label: "CSV & TXT support", included: true },
-    { label: "Instant download", included: true },
-    { label: "No credit card required", included: true },
-    { label: "Upload history", included: false },
-    { label: "Advanced MX record checks", included: false },
-    { label: "Disposable email detection", included: false },
-    { label: "Bulk processing (10k+ emails)", included: false },
-    { label: "Priority processing", included: false },
-    { label: "Email support", included: false },
+    { label: "Up to 100 emails per upload",      included: true  },
+    { label: "Syntax & duplicate validation",    included: true  },
+    { label: "CSV & TXT support",                included: true  },
+    { label: "Instant download",                 included: true  },
+    { label: "No credit card required",          included: true  },
+    { label: "Upload history",                   included: false },
+    { label: "Advanced MX record checks",        included: false },
+    { label: "Disposable email detection",       included: false },
+    { label: "Bulk processing (10k+ emails)",    included: false },
+    { label: "Priority processing",              included: false },
+    { label: "Email support",                    included: false },
   ],
 };
 
@@ -39,33 +30,33 @@ const proPlan = {
   price: "$19",
   period: "/month",
   description: "For teams and marketers who clean lists regularly at scale.",
-  color: "indigo",
   features: [
-    { label: "Unlimited emails per upload", included: true },
-    { label: "Advanced syntax validation", included: true },
-    { label: "CSV & TXT support", included: true },
-    { label: "Instant download", included: true },
-    { label: "No credit card required", included: false },
-    { label: "Upload history (last 100)", included: true },
-    { label: "Advanced MX record checks", included: true },
-    { label: "Disposable email detection", included: true },
-    { label: "Bulk processing (10k+ emails)", included: true },
-    { label: "Priority processing", included: true },
-    { label: "Email support", included: true },
+    { label: "Unlimited emails per upload",      included: true  },
+    { label: "Advanced syntax validation",       included: true  },
+    { label: "CSV & TXT support",                included: true  },
+    { label: "Instant download",                 included: true  },
+    { label: "No credit card required",          included: false },
+    { label: "Upload history (last 365 days)",   included: true  },
+    { label: "Advanced MX record checks",        included: true  },
+    { label: "Disposable email detection",       included: true  },
+    { label: "Bulk processing (10k+ emails)",    included: true  },
+    { label: "Priority processing",              included: true  },
+    { label: "Email support",                    included: true  },
   ],
 };
 
 const comparisonRows = [
-  { feature: "Emails per upload", free: "100", pro: "Unlimited" },
-  { feature: "Syntax validation", free: "Basic", pro: "Advanced" },
-  { feature: "MX record checks", free: false, pro: true },
-  { feature: "Disposable email detection", free: false, pro: true },
-  { feature: "Upload history", free: false, pro: "Last 100" },
-  { feature: "Bulk processing", free: false, pro: true },
-  { feature: "Priority processing", free: false, pro: true },
-  { feature: "File formats", free: "CSV, TXT", pro: "CSV, TXT" },
-  { feature: "Email support", free: false, pro: true },
-  { feature: "Price", free: "$0 / forever", pro: "$19 / month" },
+  { feature: "Emails per upload",         free: "100",          pro: "Unlimited"   },
+  { feature: "Validations per day",       free: "25",           pro: "500"         },
+  { feature: "Syntax validation",         free: "Standard",     pro: "Advanced"    },
+  { feature: "MX record checks",          free: false,          pro: true          },
+  { feature: "Disposable email detection",free: false,          pro: true          },
+  { feature: "Upload history",            free: "30 days",      pro: "365 days"    },
+  { feature: "Bulk processing",           free: false,          pro: true          },
+  { feature: "Priority processing",       free: false,          pro: true          },
+  { feature: "File formats",              free: "CSV, TXT",     pro: "CSV, TXT"    },
+  { feature: "Email support",             free: false,          pro: true          },
+  { feature: "Price",                     free: "$0 / forever", pro: "$19 / month" },
 ];
 
 const faqs = [
@@ -79,7 +70,7 @@ const faqs = [
   },
   {
     q: "Can I cancel anytime?",
-    a: "Absolutely. Cancel at any time from your billing settings — no questions asked.",
+    a: "Absolutely. Cancel at any time from your billing settings — your plan stays active until the end of the billing period.",
   },
   {
     q: "What file formats are supported?",
@@ -88,7 +79,6 @@ const faqs = [
 ];
 
 export default function PricingPage() {
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30">
       {/* Navbar */}
@@ -102,12 +92,10 @@ export default function PricingPage() {
               Email<span className="text-indigo-600">Cleaner</span>
             </span>
           </Link>
-
           <nav className="hidden items-center gap-8 md:flex">
             <Link href="/#features" className="text-sm font-medium text-slate-500 transition-colors hover:text-slate-900">Features</Link>
-            <Link href="/pricing" className="text-sm font-medium text-indigo-600">Pricing</Link>
+            <Link href="/pricing"   className="text-sm font-medium text-indigo-600">Pricing</Link>
           </nav>
-
           <div className="flex items-center gap-3">
             <Link href="/sign-in" className="hidden text-sm font-medium text-slate-600 hover:text-slate-900 md:block">Sign in</Link>
             <Link href="/sign-up" className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-indigo-700 hover:shadow-md">
@@ -137,7 +125,6 @@ export default function PricingPage() {
         {/* Plan cards */}
         <section className="px-6 pb-16">
           <div className="mx-auto grid max-w-4xl gap-6 md:grid-cols-2">
-
             {/* Free card */}
             <div className="flex flex-col rounded-2xl border border-slate-200 bg-white p-8 shadow-sm transition-all duration-200 hover:shadow-md">
               <div className="mb-6">
@@ -148,18 +135,16 @@ export default function PricingPage() {
                 </div>
                 <p className="mt-3 text-sm leading-relaxed text-slate-500">{freePlan.description}</p>
               </div>
-
               <ul className="mb-8 flex-1 space-y-3">
                 {freePlan.features.map(({ label, included }) => (
                   <li key={label} className="flex items-start gap-3 text-sm">
                     {included
                       ? <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
-                      : <X className="mt-0.5 h-4 w-4 shrink-0 text-slate-300" />}
+                      : <X    className="mt-0.5 h-4 w-4 shrink-0 text-slate-300" />}
                     <span className={included ? "text-slate-700" : "text-slate-400"}>{label}</span>
                   </li>
                 ))}
               </ul>
-
               <Link
                 href="/sign-up"
                 className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-6 py-3 text-sm font-semibold text-slate-700 transition-all hover:border-slate-300 hover:bg-white hover:shadow-sm"
@@ -183,31 +168,29 @@ export default function PricingPage() {
                 </div>
                 <p className="mt-3 text-sm leading-relaxed text-slate-500">{proPlan.description}</p>
               </div>
-
               <ul className="mb-8 flex-1 space-y-3">
                 {proPlan.features.map(({ label, included }) => (
                   <li key={label} className="flex items-start gap-3 text-sm">
                     {included
                       ? <Check className="mt-0.5 h-4 w-4 shrink-0 text-indigo-600" />
-                      : <X className="mt-0.5 h-4 w-4 shrink-0 text-slate-300" />}
+                      : <X    className="mt-0.5 h-4 w-4 shrink-0 text-slate-300" />}
                     <span className={included ? "text-slate-700" : "text-slate-400"}>{label}</span>
                   </li>
                 ))}
               </ul>
-
-              <Link
-                href="/sign-up"
-                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-6 py-3 text-sm font-semibold text-white shadow-md transition-all duration-200 hover:-translate-y-0.5 hover:bg-indigo-700 hover:shadow-lg"
+              <CheckoutButton
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-6 py-3 text-sm font-semibold text-white shadow-md transition-all duration-200 hover:-translate-y-0.5 hover:bg-indigo-700 hover:shadow-lg disabled:opacity-60"
               >
                 Get started <ArrowRight className="h-4 w-4" />
-              </Link>
-
-              <p className="mt-3 text-center text-xs text-slate-400">Payment coming soon — sign up to get early access</p>
+              </CheckoutButton>
+              <p className="mt-3 text-center text-xs text-slate-400">
+                Cancel anytime · Powered by Stripe
+              </p>
             </div>
           </div>
         </section>
 
-        {/* Feature comparison table */}
+        {/* Feature comparison */}
         <section className="bg-white px-6 py-16">
           <div className="mx-auto max-w-3xl">
             <h2 className="mb-8 text-center text-2xl font-bold text-slate-900">Full feature comparison</h2>
@@ -226,16 +209,12 @@ export default function PricingPage() {
                       <td className="px-6 py-4 font-medium text-slate-800">{feature}</td>
                       <td className="px-4 py-4 text-center">
                         {typeof free === "boolean"
-                          ? free
-                            ? <Check className="mx-auto h-4 w-4 text-emerald-500" />
-                            : <X className="mx-auto h-4 w-4 text-slate-300" />
+                          ? free ? <Check className="mx-auto h-4 w-4 text-emerald-500" /> : <X className="mx-auto h-4 w-4 text-slate-300" />
                           : <span className="text-slate-600">{free}</span>}
                       </td>
                       <td className="px-4 py-4 text-center">
                         {typeof pro === "boolean"
-                          ? pro
-                            ? <Check className="mx-auto h-4 w-4 text-indigo-600" />
-                            : <X className="mx-auto h-4 w-4 text-slate-300" />
+                          ? pro ? <Check className="mx-auto h-4 w-4 text-indigo-600" /> : <X className="mx-auto h-4 w-4 text-slate-300" />
                           : <span className="font-semibold text-indigo-700">{pro}</span>}
                       </td>
                     </tr>
@@ -246,36 +225,15 @@ export default function PricingPage() {
           </div>
         </section>
 
-        {/* Why upgrade highlight row */}
+        {/* Why upgrade */}
         <section className="px-6 py-16">
           <div className="mx-auto max-w-4xl">
             <h2 className="mb-10 text-center text-2xl font-bold text-slate-900">Why go Pro?</h2>
             <div className="grid gap-6 md:grid-cols-3">
               {[
-                {
-                  icon: Infinity,
-                  title: "Truly Unlimited",
-                  description: "No email caps, no monthly quotas. Upload lists of any size, as often as you need.",
-                  iconBg: "bg-indigo-50",
-                  iconColor: "text-indigo-600",
-                  border: "border-indigo-100",
-                },
-                {
-                  icon: ShieldCheck,
-                  title: "Deeper Validation",
-                  description: "Advanced MX record checks and disposable email detection catch more bad addresses.",
-                  iconBg: "bg-emerald-50",
-                  iconColor: "text-emerald-600",
-                  border: "border-emerald-100",
-                },
-                {
-                  icon: Download,
-                  title: "Full History",
-                  description: "Keep track of every upload. Revisit past results and download any clean list again.",
-                  iconBg: "bg-violet-50",
-                  iconColor: "text-violet-600",
-                  border: "border-violet-100",
-                },
+                { icon: Infinity,   title: "Truly Unlimited",  description: "No email caps, no monthly quotas. Upload lists of any size, as often as you need.", iconBg: "bg-indigo-50",  iconColor: "text-indigo-600",  border: "border-indigo-100"  },
+                { icon: ShieldCheck,title: "Deeper Validation", description: "Advanced MX record checks and disposable email detection catch more bad addresses.", iconBg: "bg-emerald-50", iconColor: "text-emerald-600", border: "border-emerald-100" },
+                { icon: Download,   title: "Full History",      description: "Keep track of every upload. Revisit past results and download any clean list again.", iconBg: "bg-violet-50",  iconColor: "text-violet-600",  border: "border-violet-100"  },
               ].map(({ icon: Icon, title, description, iconBg, iconColor, border }) => (
                 <div key={title} className={`rounded-2xl border bg-white p-7 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-md ${border}`}>
                   <div className={`mb-4 inline-flex h-11 w-11 items-center justify-center rounded-xl border ${border} ${iconBg}`}>
@@ -309,18 +267,12 @@ export default function PricingPage() {
           <div className="relative mx-auto max-w-3xl overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-600 via-indigo-600 to-violet-700 px-8 py-14 text-center shadow-2xl shadow-indigo-200">
             <div className="pointer-events-none absolute inset-0 rounded-3xl bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-white/10 to-transparent" />
             <h2 className="text-3xl font-extrabold text-white">Ready to clean your first list?</h2>
-            <p className="mt-3 text-indigo-200">No credit card. No commitment. Start for free in seconds.</p>
+            <p className="mt-3 text-indigo-200">No credit card for Free. Upgrade anytime.</p>
             <div className="mt-7 flex flex-wrap items-center justify-center gap-4">
-              <Link
-                href="/sign-up"
-                className="inline-flex items-center gap-2 rounded-xl bg-white px-6 py-3.5 text-base font-semibold text-indigo-700 shadow-md transition-all hover:-translate-y-0.5 hover:shadow-lg"
-              >
+              <Link href="/sign-up" className="inline-flex items-center gap-2 rounded-xl bg-white px-6 py-3.5 text-base font-semibold text-indigo-700 shadow-md transition-all hover:-translate-y-0.5 hover:shadow-lg">
                 Create free account <ArrowRight className="h-4 w-4" />
               </Link>
-              <Link
-                href="/dashboard"
-                className="inline-flex items-center gap-2 rounded-xl border border-white/30 px-6 py-3.5 text-base font-semibold text-white transition-all hover:bg-white/10"
-              >
+              <Link href="/dashboard" className="inline-flex items-center gap-2 rounded-xl border border-white/30 px-6 py-3.5 text-base font-semibold text-white transition-all hover:bg-white/10">
                 Go to dashboard
               </Link>
             </div>

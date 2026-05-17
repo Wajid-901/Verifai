@@ -1,0 +1,193 @@
+Integrate Razorpay subscriptions into my Email Cleaner SaaS.
+
+IMPORTANT:
+The app already has:
+- Supabase Auth
+- Supabase database
+- plan architecture
+- validation jobs
+- usage tracking foundation
+- rate limiting
+- premium SaaS UI
+
+We now need REAL paid subscriptions using Razorpay.
+
+==================================================
+1. INSTALL RAZORPAY
+==================================================
+
+Install and configure Razorpay properly.
+
+Use:
+- Razorpay Subscriptions
+- Razorpay Checkout
+- Webhooks
+
+Environment variables:
+
+RAZORPAY_KEY_ID
+RAZORPAY_KEY_SECRET
+RAZORPAY_WEBHOOK_SECRET
+
+IMPORTANT:
+Keep all secrets server-side only.
+
+==================================================
+2. CREATE SUBSCRIPTION ARCHITECTURE
+==================================================
+
+Plans:
+
+FREE
+- 100 validations/day
+- basic validation only
+
+PRO
+- 25,000 validations/month
+- MX validation
+- risky detection
+- downloadable reports
+- priority processing
+- upload history
+
+IMPORTANT:
+Use monthly validation credits instead of tiny daily limits.
+
+==================================================
+3. CREATE SUPABASE TABLES
+==================================================
+
+Create/update tables:
+
+subscriptions
+billing_events
+usage_tracking
+
+Store:
+
+user_id
+razorpay_customer_id
+razorpay_subscription_id
+plan
+status
+monthly_credits
+credits_used
+renewal_date
+
+==================================================
+4. CREATE CHECKOUT FLOW
+==================================================
+
+Flow:
+
+1. user clicks Upgrade
+2. create Razorpay subscription
+3. open Razorpay Checkout modal
+4. successful payment webhook
+5. update Supabase subscription
+6. unlock Pro features
+
+==================================================
+5. CREATE BILLING PAGE
+==================================================
+
+Create:
+/dashboard/billing
+
+Show:
+- current plan
+- credits remaining
+- renewal date
+- upgrade button
+- cancel subscription
+- payment history
+
+Keep UI premium and clean.
+
+==================================================
+6. CREATE WEBHOOK HANDLER
+==================================================
+
+Handle:
+
+subscription.activated
+subscription.charged
+subscription.completed
+subscription.cancelled
+payment.failed
+
+Update Supabase correctly.
+
+IMPORTANT:
+Verify webhook signatures securely.
+
+==================================================
+7. SERVER-SIDE PLAN ENFORCEMENT
+==================================================
+
+NEVER trust frontend plan state.
+
+Protect:
+- validation limits
+- MX validation
+- risky detection
+- queue priority
+- exports
+
+Everything enforced server-side.
+
+==================================================
+8. CREATE CREDIT SYSTEM
+==================================================
+
+Track:
+- validations used
+- validations remaining
+- monthly reset
+
+Credits should decrement automatically after validation jobs complete.
+
+==================================================
+9. ADD USAGE UI
+==================================================
+
+Dashboard should show:
+- monthly usage bar
+- credits remaining
+- upgrade prompts
+- plan badge
+
+==================================================
+10. HANDLE FAILED PAYMENTS
+==================================================
+
+If payment fails:
+- downgrade gracefully
+- preserve history
+- notify user in dashboard
+
+==================================================
+11. SECURITY
+==================================================
+
+Requirements:
+- secure webhook verification
+- server-only secrets
+- validation against forged requests
+- prevent subscription spoofing
+
+==================================================
+12. IMPORTANT
+==================================================
+
+Keep:
+- existing SaaS UI
+- responsive design
+- premium UX
+
+Focus on:
+- reliable billing
+- correct subscription state
+- production-ready architecture
+
+Do NOT redesign the app.

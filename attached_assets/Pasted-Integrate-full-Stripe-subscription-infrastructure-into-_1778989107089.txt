@@ -1,0 +1,163 @@
+Integrate full Stripe subscription infrastructure into my Email Cleaner SaaS.
+
+IMPORTANT:
+The app already has:
+- Supabase
+- Auth
+- Plan architecture
+- Rate limits
+- Validation jobs
+- Usage tracking foundation
+
+Now implement REAL subscriptions.
+
+==================================================
+1. INSTALL STRIPE
+==================================================
+
+Use:
+- Stripe Checkout
+- Stripe Webhooks
+- Stripe Customer Portal
+
+Use test mode.
+
+==================================================
+2. CREATE SUBSCRIPTION SYSTEM
+==================================================
+
+Plans:
+
+FREE
+- 100 emails/upload
+- 25 validations/day
+
+PRO
+- unlimited uploads
+- 500 validations/day
+- priority processing
+- downloadable reports
+- full risky detection
+
+==================================================
+3. CREATE STRIPE DATABASE TABLES
+==================================================
+
+Create Supabase tables:
+
+subscriptions
+billing_events
+usage_tracking
+
+Store:
+- stripe_customer_id
+- stripe_subscription_id
+- plan
+- status
+- current_period_end
+
+==================================================
+4. CREATE CHECKOUT FLOW
+==================================================
+
+Flow:
+1. user clicks Upgrade
+2. create Stripe Checkout session
+3. redirect to Stripe
+4. successful payment webhook
+5. update Supabase subscription
+6. unlock Pro features
+
+==================================================
+5. CREATE BILLING PAGE
+==================================================
+
+Create:
+/dashboard/billing
+
+Show:
+- current plan
+- usage
+- renewal date
+- upgrade/downgrade buttons
+- manage subscription button
+
+==================================================
+6. CREATE STRIPE WEBHOOK HANDLER
+==================================================
+
+Handle:
+- checkout.session.completed
+- customer.subscription.updated
+- customer.subscription.deleted
+- invoice.payment_failed
+
+Update Supabase correctly.
+
+==================================================
+7. SERVER-SIDE FEATURE GATING
+==================================================
+
+NEVER trust frontend plan state.
+
+Protect:
+- upload limits
+- risky detection
+- MX validation limits
+- queue priority
+
+All server-side.
+
+==================================================
+8. ADD USAGE TRACKING
+==================================================
+
+Track:
+- validations/day
+- emails processed
+- uploads
+- API usage
+
+Reset daily/monthly depending on plan.
+
+==================================================
+9. CREATE CUSTOMER PORTAL
+==================================================
+
+Allow:
+- cancel subscription
+- update payment method
+- view invoices
+
+==================================================
+10. ADD PLAN BADGES
+==================================================
+
+UI:
+- FREE badge
+- PRO badge
+- usage meters
+- upgrade prompts
+
+==================================================
+11. SECURITY
+==================================================
+
+Use:
+- webhook signature verification
+- secure env vars
+- server-only Stripe secret key
+
+==================================================
+12. IMPORTANT
+==================================================
+
+Keep:
+- existing SaaS design
+- premium UX
+- responsive dashboard
+
+Focus heavily on:
+- correct subscription state
+- secure billing architecture
+- production-ready implementation
