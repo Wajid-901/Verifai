@@ -13,23 +13,23 @@
     "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.105.4",
     "@upstash/redis": "^1.38.0",
-    "clsx": "catalog:",
+    "clsx": "^2.1.1",
     "lightningcss": "^1.32.0",
-    "lightningcss-win32-x64-msvc": "^1.32.0",
-    "lucide-react": "catalog:",
+    "lucide-react": "^0.545.0",
     "next": "^15.3.2",
     "razorpay": "^2.9.6",
-    "react": "catalog:",
-    "react-dom": "catalog:",
-    "tailwind-merge": "catalog:"
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "tailwind-merge": "^3.3.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.6",
-    "@types/node": "catalog:",
-    "@types/react": "catalog:",
-    "@types/react-dom": "catalog:",
+    "@types/node": "^25.3.3",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
     "postcss": "^8.5.3",
-    "tailwindcss": "catalog:",
+    "tailwindcss": "^4.1.14",
     "typescript": "~5.9.2"
   }
 }
+

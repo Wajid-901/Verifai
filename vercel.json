@@ -1,6 +1,7 @@
 {
   "framework": "nextjs",
-  "buildCommand": "pnpm --filter @workspace/email-cleaner run build",
-  "outputDirectory": "artifacts/email-cleaner/.next",
-  "installCommand": "npm install -g pnpm && pnpm install"
+  "rootDirectory": "artifacts/email-cleaner",
+  "buildCommand": "npm run build",
+  "installCommand": "npm install"
 }
+
