@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Upload, TrendingUp, CheckCircle2, Zap, Crown, ArrowRight, Menu } from "lucide-react";
 import Link from "next/link";
@@ -17,7 +17,7 @@ import type { UserProfile, DashboardTab, Plan } from "@/types";
 
 const FREE_LIMIT = 100;
 
-export default function DashboardPage() {
+function DashboardContent() {
   const router       = useRouter();
   const searchParams = useSearchParams();
 
@@ -123,6 +123,14 @@ export default function DashboardPage() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={<Loader />}>
+      <DashboardContent />
+    </Suspense>
   );
 }
 
