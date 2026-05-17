@@ -4,6 +4,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getUncachableStripeClient } from "@/lib/stripe/client";
 import { logger } from "@/lib/logger";
 
+export const dynamic = "force-dynamic";
+
 export async function POST() {
   try {
     const supabase = await createClient();

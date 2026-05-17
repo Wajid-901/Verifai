@@ -3,6 +3,8 @@ import { getUncachableStripeClient, getStripeWebhookSecret } from "@/lib/stripe/
 import { createAdminClient } from "@/lib/supabase/admin";
 import { logger } from "@/lib/logger";
 
+export const dynamic = "force-dynamic";
+
 // Must use Node.js runtime — Edge runtime does not support Buffer
 export const runtime = "nodejs";
 

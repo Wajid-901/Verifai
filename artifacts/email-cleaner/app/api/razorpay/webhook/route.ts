@@ -5,6 +5,7 @@ import { logger } from "@/lib/logger";
 
 // Must be Node.js runtime for crypto
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 type Notes = Record<string, string>;
 
