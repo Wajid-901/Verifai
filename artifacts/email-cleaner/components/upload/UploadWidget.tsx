@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import {
   Upload, FileText, Loader2, AlertCircle, PartyPopper,
   RefreshCw, ArrowRight, XCircle, Shield,
