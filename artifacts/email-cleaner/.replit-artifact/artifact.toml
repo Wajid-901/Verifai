@@ -1,25 +1,26 @@
 kind = "web"
-previewPath = "/"
-title = "Email Cleaner"
-version = "1.0.0"
-id = "artifacts/email-cleaner"
-router = "path"
+  previewPath = "/"
+  title = "Email Cleaner"
+  version = "1.0.0"
+  id = "artifacts/email-cleaner"
+  router = "path"
 
-[[integratedSkills]]
-name = "react-vite"
-version = "1.0.0"
+  [[integratedSkills]]
+  name = "react-vite"
+  version = "1.0.0"
 
-[[services]]
-name = "web"
-paths = [ "/", "/api/history", "/validate" ]
-localPort = 19548
+  [[services]]
+  name = "web"
+  paths = [ "/", "/api/history", "/validate", "/validate/status", "/api/stripe", "/api/razorpay" ]
+  localPort = 19548
 
-[services.development]
-run = "pnpm --filter @workspace/email-cleaner run dev"
+  [services.development]
+  run = "pnpm --filter @workspace/email-cleaner run dev"
 
-[services.production]
-build = [ "pnpm", "--filter", "@workspace/email-cleaner", "run", "build" ]
-run = "pnpm --filter @workspace/email-cleaner run start"
+  [services.production]
+  build = [ "pnpm", "--filter", "@workspace/email-cleaner", "run", "build" ]
+  run = "pnpm --filter @workspace/email-cleaner run start"
 
-[services.env]
-PORT = "19548"
+  [services.env]
+  PORT = "19548"
+  

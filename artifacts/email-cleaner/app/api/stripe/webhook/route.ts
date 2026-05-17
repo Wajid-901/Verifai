@@ -74,8 +74,9 @@ export async function POST(req: NextRequest) {
         const sub      = event.data.object;
         const isActive = ["active", "trialing"].includes(sub.status);
         const newPlan  = isActive ? "pro" : "free";
-        const periodEnd = sub.current_period_end
-          ? new Date(sub.current_period_end * 1000).toISOString()
+        const rawSub    = sub as unknown as { current_period_end?: number };
+        const periodEnd = rawSub.current_period_end
+          ? new Date(rawSub.current_period_end * 1000).toISOString()
           : null;
 
         // Find user by metadata.userId or by stripe_customer_id

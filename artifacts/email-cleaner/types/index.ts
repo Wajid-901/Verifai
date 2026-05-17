@@ -39,6 +39,8 @@ export interface UploadRecord {
 export interface SubscriptionRecord {
   id: number;
   user_id: string;
+  razorpay_customer_id: string | null;
+  razorpay_subscription_id: string | null;
   stripe_customer_id: string | null;
   stripe_subscription_id: string | null;
   status: string;
@@ -48,8 +50,28 @@ export interface SubscriptionRecord {
   updated_at: string;
 }
 
-export type Plan = "free" | "pro";
-export type UploadState = "idle" | "file_loaded" | "loading" | "results" | "error";
+export interface BillingEvent {
+  id: number;
+  user_id: string;
+  event_type: string;
+  razorpay_payment_id: string | null;
+  razorpay_subscription_id: string | null;
+  amount: number | null;
+  currency: string;
+  status: string;
+  created_at: string;
+}
+
+export interface UsageData {
+  type: "monthly" | "daily";
+  limit: number;
+  used: number;
+  remaining: number;
+  pct: number;
+}
+
+export type Plan         = "free" | "pro";
+export type UploadState  = "idle" | "file_loaded" | "loading" | "results" | "error";
 export type DashboardTab = "dashboard" | "upload" | "history" | "billing";
 
 export interface UserProfile {

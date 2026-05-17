@@ -1,8 +1,13 @@
 import type { Plan } from "@/types";
 
 export interface PlanConfig {
+  /** Maximum emails allowed per single upload/request */
   maxEmailsPerUpload: number;
-  dailyValidations: number;
+  /** Maximum emails per day (free plan, null = no daily cap) */
+  dailyEmailLimit: number | null;
+  /** Maximum emails per month (pro plan, null = no monthly cap) */
+  monthlyEmailLimit: number | null;
+  /** Legacy hourly rate-limit (requests, not emails) */
   hourlyValidations: number | null;
   mxChecks: boolean;
   riskyDetection: boolean;
@@ -12,30 +17,33 @@ export interface PlanConfig {
 
 export const PLAN_CONFIG: Record<Plan | "anonymous", PlanConfig> = {
   anonymous: {
-    maxEmailsPerUpload:   100,
-    dailyValidations:     0,
-    hourlyValidations:    5,
-    mxChecks:             true,
-    riskyDetection:       false,
-    priorityProcessing:   false,
+    maxEmailsPerUpload:  100,
+    dailyEmailLimit:     100,
+    monthlyEmailLimit:   null,
+    hourlyValidations:   5,
+    mxChecks:            true,
+    riskyDetection:      false,
+    priorityProcessing:  false,
     historyRetentionDays: 0,
   },
   free: {
-    maxEmailsPerUpload:   100,
-    dailyValidations:     25,
-    hourlyValidations:    null,
-    mxChecks:             true,
-    riskyDetection:       true,
-    priorityProcessing:   false,
+    maxEmailsPerUpload:  100,
+    dailyEmailLimit:     100,
+    monthlyEmailLimit:   null,
+    hourlyValidations:   null,
+    mxChecks:            true,
+    riskyDetection:      true,
+    priorityProcessing:  false,
     historyRetentionDays: 30,
   },
   pro: {
-    maxEmailsPerUpload:   100_000,
-    dailyValidations:     500,
-    hourlyValidations:    null,
-    mxChecks:             true,
-    riskyDetection:       true,
-    priorityProcessing:   true,
+    maxEmailsPerUpload:  100_000,
+    dailyEmailLimit:     null,
+    monthlyEmailLimit:   25_000,
+    hourlyValidations:   null,
+    mxChecks:            true,
+    riskyDetection:      true,
+    priorityProcessing:  true,
     historyRetentionDays: 365,
   },
 };

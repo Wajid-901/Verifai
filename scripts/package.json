@@ -4,11 +4,15 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "hello": "tsx ./src/hello.ts",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "hello":          "tsx ./src/hello.ts",
+    "seed-razorpay":  "tsx ./src/seed-razorpay-plans.ts",
+    "typecheck":      "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
     "@types/node": "catalog:",
-    "tsx": "catalog:"
+    "tsx":         "catalog:"
+  },
+  "dependencies": {
+    "razorpay": "^2.9.6"
   }
 }
