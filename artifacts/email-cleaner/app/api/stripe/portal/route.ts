@@ -30,8 +30,9 @@ export async function POST() {
     }
 
     const stripe  = await getUncachableStripeClient();
-    const domain  = process.env.REPLIT_DOMAINS?.split(",")[0];
-    const baseUrl = domain ? `https://${domain}` : "http://localhost:3000";
+    const baseUrl = process.env.NODE_ENV === "production" && process.env.NEXT_PUBLIC_SITE_URL
+      ? process.env.NEXT_PUBLIC_SITE_URL
+      : "http://localhost:3000";
 
     const portalSession = await stripe.billingPortal.sessions.create({
       customer:   customerId,

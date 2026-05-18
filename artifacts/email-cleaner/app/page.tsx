@@ -88,13 +88,13 @@ export default async function Home() {
             <div className="mt-7 flex flex-wrap items-center justify-center gap-4">
               <Link
                 href="/sign-up"
-                className="inline-flex items-center gap-2 rounded-xl bg-white px-6 py-3.5 text-base font-semibold text-indigo-700 shadow-md transition-all hover:-translate-y-0.5 hover:shadow-lg"
+                className="inline-flex items-center gap-2 rounded-xl bg-white px-6 py-3.5 text-base font-semibold text-indigo-700 shadow-md transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.98]"
               >
                 Create free account <ArrowRight className="h-4 w-4" />
               </Link>
               <Link
                 href="/dashboard"
-                className="inline-flex items-center gap-2 rounded-xl border border-white/30 px-6 py-3.5 text-base font-semibold text-white transition-all hover:bg-white/10"
+                className="inline-flex items-center gap-2 rounded-xl border border-white/30 px-6 py-3.5 text-base font-semibold text-white transition-all duration-200 hover:bg-white/10 active:scale-[0.98]"
               >
                 Go to dashboard
               </Link>
@@ -118,13 +118,13 @@ export default async function Home() {
           </p>
           <div className="flex gap-6">
             {["Privacy", "Terms", "Support"].map((item) => (
-              <a
+              <Link
                 key={item}
-                href="#"
+                href={`/${item.toLowerCase()}`}
                 className="text-sm text-slate-500 transition-colors hover:text-slate-900"
               >
                 {item}
-              </a>
+              </Link>
             ))}
           </div>
         </div>

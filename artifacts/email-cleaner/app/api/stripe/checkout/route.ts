@@ -58,8 +58,9 @@ export async function POST(_req: NextRequest) {
     }
 
     // ── Create Checkout session ───────────────────────────────────────
-    const domain = process.env.REPLIT_DOMAINS?.split(",")[0];
-    const baseUrl = domain ? `https://${domain}` : "http://localhost:3000";
+    const baseUrl = process.env.NODE_ENV === "production" && process.env.NEXT_PUBLIC_SITE_URL
+      ? process.env.NEXT_PUBLIC_SITE_URL
+      : "http://localhost:3000";
 
     const session = await stripe.checkout.sessions.create({
       customer: customerId,

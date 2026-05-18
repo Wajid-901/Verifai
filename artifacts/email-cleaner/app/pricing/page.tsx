@@ -147,7 +147,7 @@ export default function PricingPage() {
               </ul>
               <Link
                 href="/sign-up"
-                className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-6 py-3 text-sm font-semibold text-slate-700 transition-all hover:border-slate-300 hover:bg-white hover:shadow-sm"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-6 py-3 text-sm font-semibold text-slate-700 transition-all duration-200 hover:border-slate-300 hover:bg-white hover:shadow-sm active:scale-[0.98]"
               >
                 Get started free
               </Link>
@@ -179,7 +179,7 @@ export default function PricingPage() {
                 ))}
               </ul>
               <CheckoutButton
-                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-6 py-3 text-sm font-semibold text-white shadow-md transition-all duration-200 hover:-translate-y-0.5 hover:bg-indigo-700 hover:shadow-lg disabled:opacity-60"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-6 py-3 text-sm font-semibold text-white shadow-md transition-all duration-200 hover:-translate-y-0.5 hover:bg-indigo-700 hover:shadow-lg disabled:opacity-60 active:scale-[0.98]"
               >
                 Get started <ArrowRight className="h-4 w-4" />
               </CheckoutButton>
@@ -269,10 +269,10 @@ export default function PricingPage() {
             <h2 className="text-3xl font-extrabold text-white">Ready to clean your first list?</h2>
             <p className="mt-3 text-indigo-200">No credit card for Free. Upgrade anytime.</p>
             <div className="mt-7 flex flex-wrap items-center justify-center gap-4">
-              <Link href="/sign-up" className="inline-flex items-center gap-2 rounded-xl bg-white px-6 py-3.5 text-base font-semibold text-indigo-700 shadow-md transition-all hover:-translate-y-0.5 hover:shadow-lg">
+              <Link href="/sign-up" className="inline-flex items-center gap-2 rounded-xl bg-white px-6 py-3.5 text-base font-semibold text-indigo-700 shadow-md transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.98]">
                 Create free account <ArrowRight className="h-4 w-4" />
               </Link>
-              <Link href="/dashboard" className="inline-flex items-center gap-2 rounded-xl border border-white/30 px-6 py-3.5 text-base font-semibold text-white transition-all hover:bg-white/10">
+              <Link href="/dashboard" className="inline-flex items-center gap-2 rounded-xl border border-white/30 px-6 py-3.5 text-base font-semibold text-white transition-all duration-200 hover:bg-white/10 active:scale-[0.98]">
                 Go to dashboard
               </Link>
             </div>
@@ -291,7 +291,7 @@ export default function PricingPage() {
           <p className="text-sm text-slate-400">© 2026 Verifai, Inc. All rights reserved.</p>
           <div className="flex gap-6">
             {["Privacy", "Terms", "Support"].map((item) => (
-              <a key={item} href="#" className="text-sm text-slate-500 transition-colors hover:text-slate-900">{item}</a>
+              <Link key={item} href={`/${item.toLowerCase()}`} className="text-sm text-slate-500 transition-colors hover:text-slate-900">{item}</Link>
             ))}
           </div>
         </div>

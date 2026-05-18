@@ -67,7 +67,7 @@ export default function Sidebar({
           <Mail className="h-4 w-4 text-white" />
         </div>
         <span className="text-base font-bold text-slate-900">
-          Email<span className="text-indigo-600">Cleaner</span>
+          Veri<span className="text-indigo-600">fai</span>
         </span>
         <button
           onClick={onClose}

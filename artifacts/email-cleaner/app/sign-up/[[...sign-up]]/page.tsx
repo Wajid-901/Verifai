@@ -25,7 +25,11 @@ export default function SignUpPage() {
     const { error: authError, data } = await supabase.auth.signUp({
       email,
       password,
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+      options: { 
+        emailRedirectTo: process.env.NODE_ENV === "production" && process.env.NEXT_PUBLIC_SITE_URL
+          ? `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`
+          : `${window.location.origin}/auth/callback`
+      },
     });
     if (authError) { setError(authError.message); setLoading(false); return; }
     if (data.session) {
@@ -45,7 +49,7 @@ export default function SignUpPage() {
             <Mail className="h-4 w-4 text-white" />
           </div>
           <span className="text-lg font-bold text-slate-900">
-            Email<span className="text-indigo-600">Cleaner</span>
+            Veri<span className="text-indigo-600">fai</span>
           </span>
         </Link>
       </header>

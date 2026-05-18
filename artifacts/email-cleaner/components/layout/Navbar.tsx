@@ -16,7 +16,7 @@ export default function Navbar({ user, activePage }: NavbarProps) {
             <Mail className="h-4 w-4 text-white" />
           </div>
           <span className="text-lg font-bold text-slate-900">
-            Email<span className="text-indigo-600">Cleaner</span>
+            Veri<span className="text-indigo-600">fai</span>
           </span>
         </Link>
 
@@ -61,7 +61,7 @@ export default function Navbar({ user, activePage }: NavbarProps) {
               </div>
               <Link
                 href="/dashboard"
-                className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-indigo-700 hover:shadow-md"
+                className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:bg-indigo-700 hover:shadow-md active:scale-[0.98]"
               >
                 <LayoutDashboard className="h-4 w-4" />
                 Dashboard
@@ -77,7 +77,7 @@ export default function Navbar({ user, activePage }: NavbarProps) {
               </Link>
               <Link
                 href="/sign-up"
-                className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-indigo-700 hover:shadow-md"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:bg-indigo-700 hover:shadow-md active:scale-[0.98]"
               >
                 Get started <ChevronRight className="h-3.5 w-3.5" />
               </Link>
