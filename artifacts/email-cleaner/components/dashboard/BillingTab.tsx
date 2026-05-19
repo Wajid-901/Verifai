@@ -203,7 +203,7 @@ export default function BillingTab() {
               </div>
               <div className="flex items-end gap-1">
                 <span className="text-4xl font-extrabold text-slate-900">
-                  {isPro ? "₹1,500" : "₹0"}
+                  {isPro ? "₹5" : "₹0"}
                 </span>
                 <span className="mb-1 text-slate-500">{isPro ? "/month" : " forever"}</span>
               </div>
@@ -327,7 +327,7 @@ export default function BillingTab() {
             className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 py-3.5 text-sm font-semibold text-white shadow-md transition-all hover:bg-indigo-700 disabled:opacity-50"
           >
             {upgrading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Crown className="h-4 w-4" />}
-            Upgrade to Pro — ₹1,500/month
+            Upgrade to Pro — ₹5/month
           </button>
           <p className="mt-2.5 text-center text-xs text-slate-400">
             Powered by Razorpay · Cancel anytime · No hidden charges

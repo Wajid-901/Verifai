@@ -61,7 +61,7 @@ function main() {
                     return [4 /*yield*/, razorpay.plans.all({ count: 100 })];
                 case 1:
                     existingPlans = (_c.sent()).items;
-                    existing = existingPlans.find(function (p) { var _a; return ((_a = p.item) === null || _a === void 0 ? void 0 : _a.name) === "Verifai Pro"; });
+                    existing = existingPlans.find(function (p) { var _a, _b; return ((_a = p.item) === null || _a === void 0 ? void 0 : _a.name) === "Verifai Pro" && ((_b = p.item) === null || _b === void 0 ? void 0 : _b.amount) === 500; });
                     if (existing) {
                         console.log("✅  Verifai Pro plan already exists:");
                         console.log("    Plan ID : ".concat(existing.id));
@@ -76,8 +76,8 @@ function main() {
                             interval: 1,
                             item: {
                                 name: "Verifai Pro",
-                                amount: 150000, // ₹1,500.00 in paise (~$18 USD)
-                                unit_amount: 150000,
+                                amount: 500, // ₹5.00 in paise
+                                unit_amount: 500,
                                 currency: "INR",
                             },
                             notes: {
@@ -89,7 +89,7 @@ function main() {
                     plan = _c.sent();
                     console.log("\n✅  Plan created successfully!");
                     console.log("    Plan ID  : ".concat(plan.id));
-                    console.log("    Amount   : \u20B91,500.00 / month");
+                    console.log("    Amount   : \u20B95.00 / month");
                     console.log("    Currency : INR");
                     console.log("\n📌  IMPORTANT — set this in your Replit secrets:");
                     console.log("\n    RAZORPAY_PLAN_ID=".concat(plan.id, "\n"));

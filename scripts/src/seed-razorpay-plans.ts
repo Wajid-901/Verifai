@@ -27,7 +27,7 @@ async function main() {
     items: Array<{ id: string; item?: { name?: string; amount?: number }; interval?: number; period?: string }>;
   };
 
-  const existing = existingPlans.find((p) => p.item?.name === "Verifai Pro");
+  const existing = existingPlans.find((p) => p.item?.name === "Verifai Pro" && p.item?.amount === 500);
 
   if (existing) {
     console.log("✅  Verifai Pro plan already exists:");
@@ -45,8 +45,8 @@ async function main() {
     interval: 1,
     item: {
       name:        "Verifai Pro",
-      amount:      150000, // ₹1,500.00 in paise (~$18 USD)
-      unit_amount: 150000,
+      amount:      500, // ₹5.00 in paise
+      unit_amount: 500,
       currency:    "INR",
     },
     notes: {
@@ -57,7 +57,7 @@ async function main() {
 
   console.log("\n✅  Plan created successfully!");
   console.log(`    Plan ID  : ${plan.id}`);
-  console.log(`    Amount   : ₹1,500.00 / month`);
+  console.log(`    Amount   : ₹5.00 / month`);
   console.log(`    Currency : INR`);
   console.log("\n📌  IMPORTANT — set this in your Replit secrets:");
   console.log(`\n    RAZORPAY_PLAN_ID=${plan.id}\n`);

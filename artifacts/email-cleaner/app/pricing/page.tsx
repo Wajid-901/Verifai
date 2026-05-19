@@ -27,7 +27,7 @@ const freePlan = {
 
 const proPlan = {
   name: "Pro",
-  price: "$19",
+  price: "₹5",
   period: "/month",
   description: "For teams and marketers who clean lists regularly at scale.",
   features: [
@@ -56,7 +56,7 @@ const comparisonRows = [
   { feature: "Priority processing",       free: false,          pro: true          },
   { feature: "File formats",              free: "CSV, TXT",     pro: "CSV, TXT"    },
   { feature: "Email support",             free: false,          pro: true          },
-  { feature: "Price",                     free: "$0 / forever", pro: "$19 / month" },
+  { feature: "Price",                     free: "$0 / forever", pro: "₹5 / month" },
 ];
 
 const faqs = [
