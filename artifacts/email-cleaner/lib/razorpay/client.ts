@@ -3,13 +3,13 @@ import crypto from "crypto";
 
 /** Returns an authenticated Razorpay API client. */
 export function getRazorpayClient(): Razorpay {
-  const keyId     = process.env.RAZORPAY_KEY_ID;
+  const keyId     = process.env.RAZORPAY_KEY_ID || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
   const keySecret = process.env.RAZORPAY_KEY_SECRET;
 
   if (!keyId || !keySecret) {
     throw new Error(
       "Missing Razorpay credentials. " +
-      "Set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in your Replit secrets."
+      "Set RAZORPAY_KEY_ID or NEXT_PUBLIC_RAZORPAY_KEY_ID, and RAZORPAY_KEY_SECRET."
     );
   }
   return new Razorpay({ key_id: keyId, key_secret: keySecret });

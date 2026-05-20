@@ -4,24 +4,62 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getRazorpayClient } from "@/lib/razorpay/client";
 import { logger } from "@/lib/logger";
 
-// Helper to safely parse Razorpay errors which often come as objects
-function parseRazorpayError(err: unknown) {
+// Helper to safely parse Razorpay errors which often come as objects or native errors
+function parseRazorpayError(err: unknown): string {
+  if (!err) return "Unknown or Empty Error";
+
   if (err instanceof Error) {
-    return err.message;
+    // If it's a native Error, grab message and stack trace
+    return `${err.name || "Error"}: ${err.message}${err.stack ? "\nStack: " + err.stack : ""}`;
   }
-  if (typeof err === "object" && err !== null) {
-    // Razorpay standard error shape
-    const rzpErr = err as { error?: { description?: string; code?: string }, statusCode?: number };
-    if (rzpErr.error?.description) {
-      return `[${rzpErr.statusCode || "UNKNOWN"}] ${rzpErr.error.code ? rzpErr.error.code + ": " : ""}${rzpErr.error.description}`;
+
+  if (typeof err === "object") {
+    const parts: string[] = [];
+    const obj = err as Record<string, unknown>;
+
+    // Check for root-level status code
+    if (typeof obj.statusCode === "number" || typeof obj.statusCode === "string") {
+      parts.push(`HTTP Status: ${obj.statusCode}`);
     }
-    // Fallback serialization for objects
-    try {
-      return JSON.stringify(err);
-    } catch {
-      return "[Unserializable Error Object]";
+
+    // Check for standard Razorpay error code
+    if (typeof obj.code === "string") {
+      parts.push(`Code: ${obj.code}`);
     }
+
+    // Check for standard Razorpay error description
+    if (typeof obj.description === "string") {
+      parts.push(`Description: ${obj.description}`);
+    }
+
+    // Check for nested error payload (extremely common in official Razorpay SDK)
+    if (obj.error && typeof obj.error === "object") {
+      const nested = obj.error as Record<string, unknown>;
+      if (typeof nested.code === "string") {
+        parts.push(`Nested Code: ${nested.code}`);
+      }
+      if (typeof nested.description === "string") {
+        parts.push(`Nested Description: ${nested.description}`);
+      }
+      if (typeof nested.reason === "string") {
+        parts.push(`Reason: ${nested.reason}`);
+      }
+      if (typeof nested.field === "string") {
+        parts.push(`Field: ${nested.field}`);
+      }
+    }
+
+    if (parts.length === 0) {
+      try {
+        return `Serialized Object: ${JSON.stringify(obj)}`;
+      } catch {
+        return `[Unserializable Error Object]`;
+      }
+    }
+
+    return parts.join(" | ");
   }
+
   return String(err);
 }
 
@@ -33,6 +71,25 @@ export async function POST() {
     const planId = process.env.RAZORPAY_PLAN_ID;
     const keyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY_ID;
     const keySecret = process.env.RAZORPAY_KEY_SECRET;
+
+    // Helper to safely mask secrets in logs
+    const maskSecret = (str: string | undefined) => {
+      if (!str) return "MISSING";
+      if (str.length <= 8) return `SET (Too Short: ${str.length} chars)`;
+      return `${str.slice(0, 4)}...${str.slice(-4)} (${str.length} chars)`;
+    };
+
+    // Diagnostic logging for production environment consistency
+    logger.info("Diagnostic — Environment variable presence", {
+      hasPlanId: !!planId,
+      planIdValue: planId || "MISSING",
+      keyIdMasked: maskSecret(keyId),
+      keySecretMasked: maskSecret(keySecret),
+      hasSupabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+      hasSupabaseAnonKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      hasServiceRoleKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+      nodeEnv: process.env.NODE_ENV,
+    });
 
     if (!planId || !keyId || !keySecret) {
       logger.error("Missing Razorpay billing configuration", {
@@ -52,6 +109,7 @@ export async function POST() {
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
+      logger.warn("Unauthorized subscription request", { error: authError?.message });
       return NextResponse.json({ error: "You must be signed in to upgrade." }, { status: 401 });
     }
 
@@ -68,6 +126,7 @@ export async function POST() {
       .single();
 
     if ((profile?.plan as string) === "pro") {
+      logger.warn("User already has an active Pro plan", { userId: user.id });
       return NextResponse.json(
         { error: "You already have an active Pro plan." },
         { status: 400 }
@@ -79,9 +138,15 @@ export async function POST() {
     let customerId = (profile?.razorpay_customer_id as string | null) ?? null;
 
     if (!customerId) {
+      const customerEmail = user.email ?? (profile?.email as string | undefined) ?? "";
+      if (!customerEmail) {
+        throw new Error("Cannot create Razorpay customer: user has no email address.");
+      }
+
+      logger.info("Attempting Razorpay customer creation API call", { userId: user.id });
       const customer = await razorpay.customers.create({
-        name:  (profile?.full_name as string | undefined) ?? (user.email ?? "Customer"),
-        email: user.email ?? (profile?.email as string | undefined) ?? "",
+        name:  (profile?.full_name as string | undefined) ?? customerEmail,
+        email: customerEmail,
         notes: { userId: user.id },
       } as Parameters<typeof razorpay.customers.create>[0]);
 
@@ -92,11 +157,19 @@ export async function POST() {
         .update({ razorpay_customer_id: customerId })
         .eq("id", user.id);
 
-      logger.info("Razorpay customer created", { userId: user.id, customerId });
+      logger.info("Razorpay customer created successfully", { userId: user.id, customerId });
+    } else {
+      logger.info("Using existing Razorpay customer ID", { userId: user.id, customerId });
     }
 
     requestPhase = "subscription-creation";
     // ── Create subscription ────────────────────────────────────
+    logger.info("Attempting Razorpay subscription creation API call", {
+      userId: user.id,
+      customerId,
+      planId,
+    });
+
     const subscription = await razorpay.subscriptions.create({
       plan_id:     planId,
       customer_id: customerId,
@@ -105,7 +178,7 @@ export async function POST() {
       notes:       { userId: user.id },
     } as Parameters<typeof razorpay.subscriptions.create>[0]);
 
-    logger.info("Razorpay subscription created", {
+    logger.info("Razorpay subscription created successfully", {
       userId: user.id,
       subscriptionId: subscription.id,
       status: subscription.status,
@@ -117,15 +190,15 @@ export async function POST() {
     });
   } catch (err) {
     const serializedError = parseRazorpayError(err);
-    logger.error("Create subscription error", {
+    logger.error("Create subscription error occurred", {
       phase: requestPhase,
       error: serializedError,
     });
     
-    // Prevent leaking API details to the client in production
+    // Prevent leaking sensitive raw API details in production
     const clientMessage = process.env.NODE_ENV === "production" 
-      ? "Failed to create subscription. Please try again."
-      : serializedError;
+      ? `Failed to create subscription during phase '${requestPhase}'. Please contact support.`
+      : `${serializedError} (Phase: ${requestPhase})`;
 
     return NextResponse.json(
       { error: clientMessage },
