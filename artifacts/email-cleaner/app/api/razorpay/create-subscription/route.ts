@@ -5,12 +5,14 @@ import { getRazorpayClient } from "@/lib/razorpay/client";
 import { logger } from "@/lib/logger";
 
 // Helper to safely parse Razorpay errors which often come as objects or native errors
-function parseRazorpayError(err: unknown): string {
-  if (!err) return "Unknown or Empty Error";
+function parseRazorpayError(err: unknown): { summary: string; raw: unknown } {
+  if (!err) return { summary: "Unknown or Empty Error", raw: null };
 
   if (err instanceof Error) {
-    // If it's a native Error, grab message and stack trace
-    return `${err.name || "Error"}: ${err.message}${err.stack ? "\nStack: " + err.stack : ""}`;
+    return {
+      summary: `${err.name || "Error"}: ${err.message}`,
+      raw: { name: err.name, message: err.message, stack: err.stack },
+    };
   }
 
   if (typeof err === "object") {
@@ -19,7 +21,7 @@ function parseRazorpayError(err: unknown): string {
 
     // Check for root-level status code
     if (typeof obj.statusCode === "number" || typeof obj.statusCode === "string") {
-      parts.push(`HTTP Status: ${obj.statusCode}`);
+      parts.push(`HTTP ${obj.statusCode}`);
     }
 
     // Check for standard Razorpay error code
@@ -49,18 +51,17 @@ function parseRazorpayError(err: unknown): string {
       }
     }
 
-    if (parts.length === 0) {
-      try {
-        return `Serialized Object: ${JSON.stringify(obj)}`;
-      } catch {
-        return `[Unserializable Error Object]`;
-      }
-    }
+    // Capture the raw object for full Vercel log visibility
+    let rawJson: unknown = "[Unserializable]";
+    try { rawJson = JSON.parse(JSON.stringify(obj)); } catch { /* ignore */ }
 
-    return parts.join(" | ");
+    return {
+      summary: parts.length > 0 ? parts.join(" | ") : `[No standard fields — see rawError]`,
+      raw: rawJson,
+    };
   }
 
-  return String(err);
+  return { summary: String(err), raw: err };
 }
 
 export async function POST() {
@@ -79,17 +80,30 @@ export async function POST() {
       return `${str.slice(0, 4)}...${str.slice(-4)} (${str.length} chars)`;
     };
 
+    // Mode-consistency guard: warn if key mode (live/test) doesn't match plan prefix
+    const keyMode   = keyId?.startsWith("rzp_live_") ? "live" : keyId?.startsWith("rzp_test_") ? "test" : "unknown";
+    const planMode  = planId?.startsWith("plan_") ? "(plan ID format OK)" : "(unexpected plan ID format)";
+
     // Diagnostic logging for production environment consistency
     logger.info("Diagnostic — Environment variable presence", {
-      hasPlanId: !!planId,
-      planIdValue: planId || "MISSING",
-      keyIdMasked: maskSecret(keyId),
-      keySecretMasked: maskSecret(keySecret),
-      hasSupabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
-      hasSupabaseAnonKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      hasPlanId:         !!planId,
+      planIdValue:       planId || "MISSING",
+      keyIdMasked:       maskSecret(keyId),
+      keyMode,           // "live", "test", or "unknown"
+      planMode,
+      keySecretMasked:   maskSecret(keySecret),
+      hasSupabaseUrl:    !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+      hasSupabaseAnonKey:!!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
       hasServiceRoleKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
-      nodeEnv: process.env.NODE_ENV,
+      nodeEnv:           process.env.NODE_ENV,
     });
+
+    if (keyMode === "test" && process.env.NODE_ENV === "production") {
+      logger.warn("LIVE/TEST mismatch: using TEST Razorpay keys in production environment", {
+        keyMode,
+        nodeEnv: process.env.NODE_ENV,
+      });
+    }
 
     if (!planId || !keyId || !keySecret) {
       logger.error("Missing Razorpay billing configuration", {
@@ -189,16 +203,19 @@ export async function POST() {
       keyId:          keyId,
     });
   } catch (err) {
-    const serializedError = parseRazorpayError(err);
-    logger.error("Create subscription error occurred", {
-      phase: requestPhase,
-      error: serializedError,
+    const { summary, raw } = parseRazorpayError(err);
+
+    // Full structured error — visible in Vercel Function Logs
+    logger.error("Create subscription failed", {
+      phase:    requestPhase,
+      summary,
+      rawError: raw,   // ← complete Razorpay API response body
     });
-    
-    // Prevent leaking sensitive raw API details in production
-    const clientMessage = process.env.NODE_ENV === "production" 
+
+    // Prevent leaking sensitive raw API details in production response
+    const clientMessage = process.env.NODE_ENV === "production"
       ? `Failed to create subscription during phase '${requestPhase}'. Please contact support.`
-      : `${serializedError} (Phase: ${requestPhase})`;
+      : `${summary} (Phase: ${requestPhase})`;
 
     return NextResponse.json(
       { error: clientMessage },
